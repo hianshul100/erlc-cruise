@@ -84,7 +84,11 @@ class Hud {
         h := Max(80, height + 0)
         x := Config.GetInt("Hud", "X")
         y := Config.GetInt("Hud", "Y")
-        try this.Gui.Move(x, y, this.Width, h)
+        try {
+            this.Gui.Move(x, y, this.Width, h)
+            if this.Visible
+                this.KeepOnScreen()
+        }
     }
 
     ; Detects drag repositioning (WebView2 drags the window natively) and saves it.
@@ -112,7 +116,33 @@ class Hud {
         this.Gui.Opt("+LastFound")
         try WinSetTransparent(Config.GetInt("Hud", "Opacity"), this.Gui.Hwnd)
         this.Visible := true
+        this.KeepOnScreen()
         this.PushConfig()
+    }
+
+    KeepOnScreen() {
+        hwnd := this.Gui.Hwnd
+        WinGetPos(&x, &y, &width, &height, hwnd)
+        monitor := MonitorGetPrimary()
+        Loop MonitorGetCount() {
+            MonitorGetWorkArea(A_Index, &left, &top, &right, &bottom)
+            if x >= left && x < right && y >= top && y < bottom {
+                monitor := A_Index
+                break
+            }
+        }
+        MonitorGetWorkArea(monitor, &left, &top, &right, &bottom)
+        fitted := Hud.FitWithin(x, y, width, height, left, top, right, bottom)
+        if fitted.X != x || fitted.Y != y {
+            WinMove(fitted.X, fitted.Y, , , hwnd)
+            Config.Set("Hud", "X", fitted.X)
+            Config.Set("Hud", "Y", fitted.Y)
+        }
+    }
+
+    static FitWithin(x, y, width, height, left, top, right, bottom) {
+        return {X: Max(left, Min(x, right - width)),
+            Y: Max(top, Min(y, bottom - height))}
     }
 
     ToggleCruise() {

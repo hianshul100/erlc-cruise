@@ -33,7 +33,7 @@ speedometer and follows the Roblox window. It pauses while you steer
 manually and waits briefly after you release the steering key. It can miss
 markings or mistake bright objects for them.
 
-Drag the HUD to move it. **Stop** releases the app's controls. The red **×**
+Drag the HUD to move it. Saving Settings shows the HUD and keeps it on-screen. **Stop** releases the app's controls. The red **×**
 also hides the HUD, and the system tray can bring it back. Switching away from
 Roblox stops both controls. The speed band depends on OCR and vehicle response.
 

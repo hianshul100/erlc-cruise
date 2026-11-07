@@ -18,7 +18,7 @@ const mockState = {
         Debug: "F9", Cancel: "~s", Settings: "F10", ToggleHud: "F11",
     },
     hud: {
-        X: 20, Y: 20, Width: 300, Opacity: 235, Visible: true,
+        X: 20, Y: 20, Width: 300, Opacity: 235,
         ShowTarget: true, ShowSpeed: true, ShowThrottle: true, ShowBrake: true, ShowAccel: true, ShowAction: true,
     },
     ocr: { Language: "en-us", Scale: 3, Grayscale: false, InvertColors: false, Monochrome: 0 },
@@ -293,7 +293,6 @@ function render(state) {
         : "Center the camera and draw a box around the road ahead, including both lane markings.";
 
     // HUD
-    document.getElementById("hudVisible").checked = !!state.hud.Visible;
     renderHudToggles(state.hud);
     renderGrid("hud-grid", HUD_FIELDS, state.hud);
 
@@ -384,7 +383,6 @@ function collect() {
         },
         hotkeys,
         hud: Object.assign(
-            { Visible: document.getElementById("hudVisible").checked },
             collectHudToggles(),
             collectGrid("hud-grid")
         ),

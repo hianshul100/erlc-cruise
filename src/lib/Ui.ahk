@@ -108,7 +108,6 @@ class Ui {
                 Y: Config.GetInt("Hud", "Y"),
                 Width: Config.GetInt("Hud", "Width"),
                 Opacity: Config.GetInt("Hud", "Opacity"),
-                Visible: Config.GetBool("Hud", "Visible"),
                 ShowTarget: Config.GetBool("Hud", "ShowTarget"),
                 ShowSpeed: Config.GetBool("Hud", "ShowSpeed"),
                 ShowThrottle: Config.GetBool("Hud", "ShowThrottle"),
@@ -195,7 +194,7 @@ class Ui {
             Config.Set("Hud", "Y", this.ToInt(state.hud.Y, 20))
             Config.Set("Hud", "Width", Max(200, this.ToInt(state.hud.Width, 300)))
             Config.Set("Hud", "Opacity", Min(255, Max(30, this.ToInt(state.hud.Opacity, 235))))
-            Config.Set("Hud", "Visible", state.hud.Visible ? 1 : 0)
+            Config.Set("Hud", "Visible", 1)
             Config.Set("Hud", "ShowTarget", state.hud.ShowTarget ? 1 : 0)
             Config.Set("Hud", "ShowSpeed", state.hud.ShowSpeed ? 1 : 0)
             Config.Set("Hud", "ShowThrottle", state.hud.ShowThrottle ? 1 : 0)
