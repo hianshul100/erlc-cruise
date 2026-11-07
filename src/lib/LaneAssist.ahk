@@ -11,6 +11,8 @@ class LaneAssist {
     TrustedRows := Map()
     ScanWidth := 0
     ScanHeight := 0
+    TiltedCamera := false
+    CameraCenter := 0.5
     HeldKey := ""
     ReleaseAt := 0
 
@@ -48,6 +50,8 @@ class LaneAssist {
         this.Region := LaneAssist.ReadRegion()
         if !this.Region
             return
+        this.TiltedCamera := Config.GetBool("Lane", "TiltedCamera")
+        this.CameraCenter := Max(0.2, Min(0.8, Config.GetInt("Lane", "CameraCenter") / 100))
         InstallKeybdHook()
         this.RequiresSpeed := requiresSpeed
         if requiresSpeed
@@ -197,12 +201,15 @@ class LaneAssist {
             this.ScanHeight := h
         }
 
-        anchor := w / 2
+        anchor := w * (this.TiltedCamera ? this.CameraCenter : 0.5)
         points := []
         measured := Map()
         searchCenter := anchor
         useHistory := A_TickCount - this.TrustedAt <= 240
-        for index, fraction in [0.88, 0.78, 0.68, 0.58, 0.48, 0.38, 0.28, 0.18] {
+        rows := this.TiltedCamera
+            ? [0.77, 0.73, 0.69, 0.65, 0.61, 0.57, 0.53, 0.49, 0.45, 0.41, 0.37, 0.33, 0.29, 0.25, 0.21, 0.17]
+            : [0.88, 0.78, 0.68, 0.58, 0.48, 0.38, 0.28, 0.18]
+        for index, fraction in rows {
             row := Round((h - 1) * fraction) * w * 4
             prior := useHistory ? this.TrustedRows.Get(index, false) : false
             split := Min(w - 14, Max(13, Round(searchCenter)))
@@ -227,7 +234,8 @@ class LaneAssist {
             center := (left + right) / 2
             if points.Length {
                 previous := points[-1]
-                if laneWidth < previous.Width * 0.55 || laneWidth > previous.Width * 1.2
+                minRatio := this.TiltedCamera ? Max(0.32, 0.72 - (previous.Y - fraction)) : 0.55
+                if laneWidth < previous.Width * minRatio || laneWidth > previous.Width * 1.2
                     || Abs(center - searchCenter) > previous.Width * 0.4
                     continue
             }
@@ -254,8 +262,23 @@ class LaneAssist {
         near := points[1]
         nearX := near.X * 0.7 + points[2].X * 0.3
         farX := points[-1].X * 0.7 + points[-2].X * 0.3
-        demand := ((nearX - anchor) * 0.40 + (farX - anchor) * 0.85) / near.Width
-        curvature := Abs(farX - nearX) / near.Width
+        bend := farX - nearX
+        if this.TiltedCamera {
+            ; A tilted straight road still converges toward its vanishing point.
+            ; Compare the distant lane to the line implied by the near and mid widths.
+            mid := points[Ceil(points.Length / 2)]
+            far := points[-1]
+            widthChange := near.Width - mid.Width
+            if points.Length >= 5 && widthChange >= near.Width * 0.16 {
+                expectedFar := near.X + (mid.X - near.X)
+                    * Min(2.6, Max(0, (near.Width - far.Width) / widthChange))
+                bend := far.X - expectedFar
+            }
+        }
+        demand := this.TiltedCamera
+            ? ((nearX - anchor) * 0.95 + bend * 0.75) / near.Width
+            : ((nearX - anchor) * 0.40 + (farX - anchor) * 0.85) / near.Width
+        curvature := Abs(bend) / near.Width
         status := trusted ? "Lane detected" : "Tracking dashed line"
         if Abs(demand) < 0.075
             return {Status: status, Direction: "", Demand: 0, Estimated: !trusted, Trusted: trusted, Curvature: curvature}
@@ -270,10 +293,19 @@ class LaneAssist {
         while (step > 0 ? x <= limit : x >= limit) {
             offset := row + x * 4
             mark := this.Luma(pixels, offset)
+            if this.TiltedCamera {
+                b := NumGet(pixels, offset, "UChar")
+                g := NumGet(pixels, offset + 1, "UChar")
+                r := NumGet(pixels, offset + 2, "UChar")
+                if mark < 55 || Max(r, g, b) - Min(r, g, b) > 62 {
+                    x += step
+                    continue
+                }
+            }
             for radius in [4, 8, 12] {
                 left := this.Luma(pixels, offset - radius * 4)
                 right := this.Luma(pixels, offset + radius * 4)
-                if mark >= Max(left, right) + 17 && Abs(left - right) <= 40
+                if mark >= Max(left, right) + 17 && Abs(left - right) <= (this.TiltedCamera ? 30 : 40)
                     return x
             }
             x += step

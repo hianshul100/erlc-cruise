@@ -39,7 +39,7 @@ class Config {
             "ShowAccel", 0,
             "ShowAction", 0
         ),
-        "Lane", Map("Region", ""),
+        "Lane", Map("Region", "", "TiltedCamera", 1, "CameraCenter", 50),
         "Region", Map(
             "X", 0,
             "Y", 0,

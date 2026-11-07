@@ -81,3 +81,12 @@ No destination is required. The HUD names the highway and upcoming bend.
 Both mode can slow early for a mapped bend when the screen also shows a lane.
 A mapped bend only strengthens steering when the screen agrees on direction.
 The app follows the current highway and leaves exit choices to the driver.
+
+### Tilted camera
+
+The tilted profile is on by default for a behind-the-car view pitched down
+roughly 20–45°. It samples more of the road above the speedometer and
+accounts for the perspective narrowing on straight roads. In **Regions &
+OCR**, set **Car center in lane box (%)** to where the rear center of the
+car appears horizontally within the selected road box. Use 50 for a
+centered box. Clear **Tilted camera** to use the original scan profile.

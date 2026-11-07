@@ -135,6 +135,8 @@ class Ui {
             },
             region: {x: r.X, y: r.Y, w: r.W, h: r.H, set: Config.HasRegion()},
             laneRegionSet: !!LaneAssist.ReadRegion(),
+            laneCamera: {tilted: Config.GetBool("Lane", "TiltedCamera"),
+                center: Config.GetInt("Lane", "CameraCenter")},
             debug: this.BuildDebug()
         }
     }
@@ -199,6 +201,11 @@ class Ui {
             Config.SetHotkey("Cancel", this.CleanHotkey(hk.Cancel))
             Config.SetHotkey("Settings", this.CleanHotkey(hk.Settings))
             Config.SetHotkey("ToggleHud", this.CleanHotkey(hk.ToggleHud))
+
+            if state.HasOwnProp("laneCamera") {
+                Config.Set("Lane", "TiltedCamera", state.laneCamera.tilted ? 1 : 0)
+                Config.Set("Lane", "CameraCenter", Max(20, Min(80, this.ToInt(state.laneCamera.center, 50))))
+            }
 
             ; HUD
             Config.Set("Hud", "X", this.ToInt(state.hud.X, 20))

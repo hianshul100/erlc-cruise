@@ -114,6 +114,14 @@
                     <label class="card-title">Lane region</label>
                     <p class="hint" id="lane-region-summary">No lane region set.</p>
                     <button class="btn" id="select-lane-region">Select Lane Region</button>
+                    <label class="switch">
+                        <input type="checkbox" id="lane-tilted-camera" checked>
+                        <span class="switch-track"><span class="switch-thumb"></span></span>
+                        <span class="switch-label">Tilted camera (20–45° down)</span>
+                    </label>
+                    <label class="card-title" for="lane-camera-center">Car center in lane box (%)</label>
+                    <p class="hint">Use 50 if the rear of the car is centered in the selected box. Enter a lower percentage if the car appears left of center.</p>
+                    <input class="field" id="lane-camera-center" type="number" min="20" max="80" value="50">
                 </div>
                 <div class="card">
                     <label class="card-title">OCR options</label>

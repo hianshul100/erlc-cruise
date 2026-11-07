@@ -22,6 +22,7 @@ const mockState = {
         ShowTarget: true, ShowSpeed: true, ShowThrottle: true, ShowBrake: true, ShowAccel: true, ShowAction: true,
     },
     ocr: { Language: "en-us", Scale: 3, Grayscale: false, InvertColors: false, Monochrome: 0 },
+    laneCamera: { tilted: true, center: 50 },
     region: { x: 0, y: 0, w: 0, h: 0, set: false },
     debug: { version: "v0.0.0", os: "Windows", ahk: "v2.0", webview2: "-", game: "not found", region: "not set", logging: "on", dataDir: "" },
 };
@@ -288,6 +289,8 @@ function render(state) {
 
     // Tuning
 
+    document.getElementById("lane-tilted-camera").checked = state.laneCamera?.tilted ?? true;
+    document.getElementById("lane-camera-center").value = state.laneCamera?.center ?? 50;
     document.getElementById("lane-region-summary").textContent = state.laneRegionSet
         ? "Lane region saved. Re-select if you change camera angle."
         : "Center the camera and draw a box around the road ahead, including both lane markings.";
@@ -386,6 +389,10 @@ function collect() {
             collectHudToggles(),
             collectGrid("hud-grid")
         ),
+        laneCamera: {
+            tilted: document.getElementById("lane-tilted-camera").checked,
+            center: num("lane-camera-center"),
+        },
         ocr: Object.assign(
             { Grayscale: document.getElementById("ocrGrayscale").checked, InvertColors: document.getElementById("ocrInvert").checked },
             collectGrid("ocr-grid")
