@@ -218,7 +218,7 @@ html, body {
 }
 
 .hud-mode-row .hud-status { margin: 0; }
-#hud-mode {
+#hud-mode, #lane-setup {
     -webkit-app-region: no-drag;
     border: 1px solid var(--border-strong);
     border-radius: 6px;
@@ -230,3 +230,6 @@ html, body {
 }
 
 #hud-mode:disabled { cursor: default; opacity: 0.7; }
+
+#lane-setup { margin-bottom: 8px; }
+.hud-mode-row .hud-status { font-size: 13px; text-align: right; }

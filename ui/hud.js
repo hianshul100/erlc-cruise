@@ -63,6 +63,12 @@ function render(state) {
     }
     reportHeight();
 
+    const laneSetup = el("lane-setup");
+    if (Boolean(laneSetup.hidden) === Boolean(state.laneNeedsRegion)) {
+        laneSetup.hidden = !state.laneNeedsRegion;
+        reportHeight();
+    }
+
     const toggle = el("toggle-cruise");
     toggle.textContent = state.active ? "Stop" : "Start";
     toggle.setAttribute("aria-pressed", state.active ? "true" : "false");
@@ -75,7 +81,7 @@ function render(state) {
         status.style.color = COLORS.debug;
         dot.classList.remove("on");
     } else if (state.active) {
-        status.textContent = state.laneActive && !state.speedActive ? "LANE ON" : "ACTIVE";
+        status.textContent = state.laneActive ? state.laneStatus : "ACTIVE";
         status.style.color = COLORS.on;
         dot.classList.add("on");
     } else {
@@ -139,4 +145,8 @@ el("close-hud").addEventListener("click", () => {
 
 el("hud-mode").addEventListener("click", () => {
     if (typeof ahk !== "undefined") ahk.CycleMode();
+});
+
+el("lane-setup").addEventListener("click", async () => {
+    if (typeof ahk !== "undefined") await ahk.LaneSetup();
 });

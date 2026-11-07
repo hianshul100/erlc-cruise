@@ -56,6 +56,7 @@ class Hud {
         g.AddCallbackToScript("Resize", (wv, height) => this.OnResize(height))
         g.AddCallbackToScript("ToggleCruise", (*) => this.ToggleCruise())
         g.AddCallbackToScript("CycleMode", (*) => this.CycleMode())
+        g.AddCallbackToScript("LaneSetup", (*) => Ui.OnSelectLaneRegion())
         g.AddCallbackToScript("CloseHud", (*) => this.SetVisible(false))
 
         if !A_IsCompiled
@@ -210,6 +211,8 @@ class Hud {
             speedActive: engine.Active,
             laneActive: this.Lane.Active,
             mode: this.ModeNames[this.Mode],
+            laneNeedsRegion: this.Mode != 1 && !this.Lane.Active && !LaneAssist.ReadRegion(),
+            laneStatus: this.Lane.Status,
             debug: st.debug,
             target: st.target,
             speed: st.speed,

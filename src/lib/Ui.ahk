@@ -273,6 +273,7 @@ class Ui {
                 return "Lane region selection cancelled."
             if !LaneAssist.SaveRegion(r, x, y, width, height)
                 return "Draw a larger box fully inside the Roblox window."
+            Logger.Action("Lane region saved.")
             return "Lane region saved."
         } finally {
             if hudWasVisible

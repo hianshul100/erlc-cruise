@@ -38,3 +38,7 @@ also hides the HUD, and the system tray can bring it back. Switching away from
 Roblox stops both controls. The speed band depends on OCR and vehicle response.
 
 ERLC Cruise Control is an independent tool. See [LICENSE](./LICENSE).
+
+The HUD shows **Select Lane Region** if no lane box is saved. While active it
+shows whether it is looking for markings, has detected the lane, or has tapped
+A or D.
