@@ -51,6 +51,17 @@ function reportHeight() {
 }
 
 function render(state) {
+    const navigation = el("navigation-readout");
+    const hasNavigation = Boolean(state.navigation);
+    if (navigation.hidden === hasNavigation) {
+        navigation.hidden = !hasNavigation;
+        reportHeight();
+    }
+    if (hasNavigation && navigation.textContent !== state.navigation) {
+        navigation.textContent = state.navigation;
+        navigation.title = state.navigation;
+    }
+
     const mode = el("hud-mode");
     const modeChanged = mode.textContent !== state.mode;
     if (modeChanged) mode.textContent = state.mode;

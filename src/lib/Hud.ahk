@@ -243,6 +243,7 @@ class Hud {
             mode: this.ModeNames[this.Mode],
             laneNeedsRegion: this.Mode != 1 && !this.Lane.Active && !LaneAssist.ReadRegion(),
             laneStatus: this.Lane.Status,
+            navigation: gNavigation.HudText(),
             debug: st.debug,
             target: st.target,
             speed: st.speed,

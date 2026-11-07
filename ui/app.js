@@ -413,6 +413,55 @@ function initTitleBar() {
 // Actions
 // ---------------------------------------------------------------------------
 
+function initNavigation() {
+    const byId = (id) => document.getElementById("navigation-" + id);
+    let lastRoutes = "";
+    async function refresh() {
+        const raw = await call("NavigationState");
+        if (!raw) return;
+        const nav = JSON.parse(raw);
+        byId("status").textContent = nav.location || nav.status;
+        byId("disconnect").disabled = !nav.connected;
+        byId("record").disabled = !nav.connected && !nav.recording;
+        byId("record").textContent = nav.recording ? "Save Recording" : "Record Route";
+        byId("cancel").disabled = !nav.recording;
+        byId("follow").disabled = !nav.connected || nav.recording || !nav.routes.length;
+        byId("stop").disabled = !nav.following;
+        if (lastRoutes === JSON.stringify(nav.routes)) return;
+        lastRoutes = JSON.stringify(nav.routes);
+        const select = byId("routes");
+        const selected = select.value;
+        select.replaceChildren();
+        if (!nav.routes.length) select.add(new Option("No saved routes", ""));
+        nav.routes.forEach((name, index) => select.add(new Option(name, String(index + 1))));
+        if (selected) select.value = selected;
+    }
+
+    const handlers = {
+        connect: () => call("NavigationConnect", byId("player").value.trim()),
+        disconnect: () => call("NavigationDisconnect"),
+        record: () => call("NavigationRecord"),
+        cancel: () => call("NavigationCancel"),
+        follow: () => call("NavigationFollow", Number(byId("routes").value)),
+        stop: () => call("NavigationStop"),
+    };
+    for (const [name, handler] of Object.entries(handlers)) {
+        byId(name).addEventListener("click", async () => {
+            try {
+                const result = await handler();
+                if (result) setStatus(result);
+                await refresh();
+            } catch {
+                setStatus("Navigation action failed.", "err");
+            }
+        });
+    }
+
+    if (isHost) setInterval(() => {
+        if (document.querySelector('[data-page="navigation"].is-active')) refresh().catch(() => {});
+    }, 1000);
+}
+
 function initActions() {
     document.getElementById("save").addEventListener("click", async () => {
         setStatus("Saving...");
@@ -500,6 +549,7 @@ async function boot() {
     initTabs();
     initTitleBar();
     initActions();
+    initNavigation();
     try {
         render(await Bridge.getState());
         setStatus(isHost ? "Ready." : "Preview mode (no AHK host).");

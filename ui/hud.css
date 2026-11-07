@@ -233,3 +233,12 @@ html, body {
 
 #lane-setup { margin-bottom: 8px; }
 .hud-mode-row .hud-status { font-size: 13px; text-align: right; }
+
+#navigation-readout {
+    margin-bottom: 8px;
+    color: #a9e9ff;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

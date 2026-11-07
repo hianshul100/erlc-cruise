@@ -30,6 +30,7 @@
                 <button class="nav-item" data-tab="hotkeys">Hotkeys</button>
                 <button class="nav-item" data-tab="hud">HUD</button>
                 <button class="nav-item" data-tab="ocr">Regions &amp; OCR</button>
+                <button class="nav-item" data-tab="navigation">Navigation</button>
                 <button class="nav-item" data-tab="about">About</button>
             </nav>
             <div class="sidebar-foot">
@@ -129,6 +130,26 @@
                         <span class="switch-track"><span class="switch-thumb"></span></span>
                         <span class="switch-label">Invert colors</span>
                     </label>
+                </div>
+            </section>
+
+            <section class="page" data-page="navigation">
+                <div class="card">
+                    <label class="card-title" for="navigation-player">Private-server API</label>
+                    <p class="hint">Use your numeric Roblox user ID and your ER:LC server key. The key is entered in a separate prompt and kept for this session.</p>
+                    <input class="field" id="navigation-player" inputmode="numeric" maxlength="20" placeholder="Roblox user ID">
+                    <button class="btn" id="navigation-connect">Connect API</button>
+                    <button class="btn btn-ghost" id="navigation-disconnect">Disconnect</button>
+                    <p class="hint" id="navigation-status">Disconnected</p>
+                </div>
+                <div class="card">
+                    <label class="card-title" for="navigation-routes">Recorded routes</label>
+                    <p class="hint">Record a drive once, then follow its waypoints. Directions appear on the HUD.</p>
+                    <button class="btn" id="navigation-record">Record Route</button>
+                    <button class="btn btn-ghost" id="navigation-cancel" disabled>Cancel Recording</button>
+                    <select class="field" id="navigation-routes"><option value="">No saved routes</option></select>
+                    <button class="btn" id="navigation-follow">Follow Route</button>
+                    <button class="btn btn-ghost" id="navigation-stop">Stop Guidance</button>
                 </div>
             </section>
 

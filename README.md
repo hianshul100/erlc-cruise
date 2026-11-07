@@ -47,3 +47,16 @@ Steering looks ahead along lane markings and varies the duration of its
 corrections. It can briefly bridge a missing dashed marking using the last
 reliable lane and reduces steering strength while doing so. Keep the near road and the visible bend inside the lane region.
 Take over when markings leave the selected view or at abrupt turns.
+
+## API navigation
+
+Open **Settings → Navigation**, enter your numeric Roblox user ID, and click
+**Connect API**. Enter your ER:LC private-server key in the masked prompt.
+The key stays in memory for this session and goes only to the official API.
+The API pack and a server key are required. No account or Discord login is used.
+
+The HUD shows your street and postal when available. To save a path, click
+**Record Route**, drive it, then choose **Save Recording**. Select the saved
+route and click **Follow Route** for compass directions to its next waypoint.
+Routes are stored locally. Guidance follows recorded waypoints and does not
+calculate routes through unrecorded roads or send steering inputs.

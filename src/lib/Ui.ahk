@@ -41,6 +41,13 @@ class Ui {
         g.AddCallbackToScript("OpenLogs", (*) => (Run(Paths.LogsDir), "Opened."))
         g.AddCallbackToScript("SelectRegion", (*) => this.OnSelectRegion())
         g.AddCallbackToScript("SelectLaneRegion", (*) => this.OnSelectLaneRegion())
+        g.AddCallbackToScript("NavigationState", (*) => JSON.stringify(gNavigation.State()))
+        g.AddCallbackToScript("NavigationConnect", (wv, id) => gNavigation.Connect(id))
+        g.AddCallbackToScript("NavigationDisconnect", (*) => (gNavigation.Disconnect(), "Disconnected."))
+        g.AddCallbackToScript("NavigationRecord", (*) => gNavigation.ToggleRecording())
+        g.AddCallbackToScript("NavigationCancel", (*) => gNavigation.CancelRecording())
+        g.AddCallbackToScript("NavigationFollow", (wv, index) => gNavigation.Follow(index))
+        g.AddCallbackToScript("NavigationStop", (*) => gNavigation.StopRoute())
         g.AddCallbackToScript("TestRead", (*) => this.OnTestRead())
         g.AddCallbackToScript("CloseWindow", (*) => (this.Hide(), ""))
 

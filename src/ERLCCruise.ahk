@@ -45,6 +45,7 @@ Persistent
 #Include %A_ScriptDir%\lib\LaneAssist.ahk
 #Include %A_ScriptDir%\lib\RegionSelector.ahk
 #Include %A_ScriptDir%\..\vendor\JSON.ahk
+#Include %A_ScriptDir%\lib\Navigation.ahk
 #Include %A_ScriptDir%\..\vendor\webview\WebViewToo.ahk
 #Include %A_ScriptDir%\lib\Hud.ahk
 #Include %A_ScriptDir%\lib\Ui.ahk
@@ -167,6 +168,7 @@ gEngine.Input.InstallExitRelease()
 gEngine.StartTimers()
 Logger.Info("Engine initialised.")
 
+global gNavigation := Navigation()
 global gHud := Hud(gEngine)
 SetTimer(RefreshHud.Bind(gHud, gEngine), 100)
 Logger.Info("HUD initialised.")
