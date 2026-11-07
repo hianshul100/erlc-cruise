@@ -4,6 +4,9 @@ class CruiseEngine {
     Active := false
     Starting := false
     RawSpeed := -1
+    LaneGuidance := false
+    LaneLimit := -1
+    LaneReadAt := 0
     Duty := 0
     BrakeUntil := 0
     NextBrakeAt := 0
@@ -89,6 +92,7 @@ class CruiseEngine {
 
     Stop(reason := "Cruise off") {
         this.Active := false
+        this.SetLaneGuidance(false)
         this.RawSpeed := -1
         this.Duty := 0
         this.Input.ReleaseAll()
@@ -159,6 +163,34 @@ class CruiseEngine {
         this.BuildStatus("read " read.Speed)
     }
 
+    SetLaneGuidance(enabled) {
+        if enabled = this.LaneGuidance
+            return
+        this.LaneGuidance := enabled
+        this.LaneLimit := -1
+        this.LaneReadAt := 0
+    }
+
+    UpdateLaneGuidance(curvature) {
+        now := A_TickCount
+        desired := CruiseEngine.BendLimit(this.Target, curvature)
+        if this.LaneLimit < 0 || !this.HasFreshLane()
+            this.LaneLimit := desired
+        else
+            this.LaneLimit := Min(desired, this.LaneLimit + (now - this.LaneReadAt) * 0.012)
+        this.LaneReadAt := now
+    }
+
+    HasFreshLane() => this.LaneReadAt > 0 && A_TickCount - this.LaneReadAt <= 300
+
+    EffectiveTarget() => this.LaneGuidance && this.HasFreshLane()
+        ? Min(this.Target, this.LaneLimit) : this.Target
+
+    static BendLimit(target, curvature) {
+        severity := Min(1, Max(0, (curvature - 0.08) / 0.45))
+        return Min(target, Max(22, target * (1 - 0.55 * severity)))
+    }
+
     ; Release both keys when the game or a fresh speed reading is unavailable.
     UpdateThrottle() {
         Critical("On")
@@ -177,11 +209,13 @@ class CruiseEngine {
         }
 
         now := A_TickCount
-        overshoot := this.RawSpeed - this.Target
+        target := this.EffectiveTarget()
+        curveLimited := target < this.Target - 1
+        overshoot := this.RawSpeed - target
         if overshoot <= 0
             this.BrakeUntil := 0
-        if overshoot >= 3 && now >= this.NextBrakeAt {
-            this.BrakeUntil := now + 60
+        if overshoot >= (curveLimited ? 2 : 3) && now >= this.NextBrakeAt {
+            this.BrakeUntil := now + (curveLimited ? Min(95, 55 + overshoot * 2) : 60)
             this.NextBrakeAt := now + 350
         }
 
@@ -195,7 +229,8 @@ class CruiseEngine {
         this.Input.ReleaseBrake()
         ; Ease off before reaching the target when speed is already rising.
         predictedSpeed := this.RawSpeed + Max(0, this.Reader.Accel) * 0.25
-        throttle := overshoot < 0 && (overshoot <= -2 || predictedSpeed < this.Target)
+        throttle := (!this.LaneGuidance || this.HasFreshLane()) && overshoot < 0
+            && (overshoot <= -2 || predictedSpeed < target)
         this.Duty := throttle ? 1 : 0
         if throttle
             this.Input.HoldThrottle()

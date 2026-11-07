@@ -19,7 +19,7 @@ Click the mode label on the HUD to cycle through the three modes, then click
 | --- | --- |
 | Maintain Speed | Uses throttle below the target and brief brake pulses when at least 3 mph above it. |
 | Lane Assist Only | Nudges the steering near visible white lane markings. |
-| Both | Runs speed maintenance and lane assistance together. |
+| Both | Runs both controls and lowers the speed target on clearly detected bends. It coasts when lane tracking is lost. |
 
 For either speed mode, use **Settings → Regions & OCR → Select Speedometer
 Region**, or press **F5** in Roblox, and draw a box around the speed digits.

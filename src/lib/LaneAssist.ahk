@@ -50,6 +50,8 @@ class LaneAssist {
             return
         InstallKeybdHook()
         this.RequiresSpeed := requiresSpeed
+        if requiresSpeed
+            this.Engine.SetLaneGuidance(true)
         this.ResumeAt := A_TickCount + 400
         this.NextPulseAt := 0
         this.Status := "Finding lanes"
@@ -58,6 +60,8 @@ class LaneAssist {
     }
 
     Stop() {
+        if this.RequiresSpeed
+            this.Engine.SetLaneGuidance(false)
         this.Active := false
         this.Status := "Ready"
         SetTimer(this.UpdateFn, 0)
@@ -90,6 +94,8 @@ class LaneAssist {
         now := A_TickCount
         if this.IsSteering() {
             this.Status := "Manual steering"
+            if this.RequiresSpeed
+                this.Engine.SetLaneGuidance(false)
             this.ReleaseSteering()
             this.LastDirection := ""
             this.SmoothedDemand := 0
@@ -101,6 +107,8 @@ class LaneAssist {
             this.ReleaseSteering()
         if this.HeldKey != "" || now < this.ResumeAt
             return
+        if this.RequiresSpeed
+            this.Engine.SetLaneGuidance(true)
 
         hwnd := WinActive(GameWindow.WinTitle())
         if !hwnd
@@ -120,6 +128,8 @@ class LaneAssist {
         if !this.Active || WinActive(GameWindow.WinTitle()) != hwnd
             || this.IsSteering() || (this.RequiresSpeed && !this.Engine.Active)
             return
+        if this.RequiresSpeed && scan && scan.Trusted
+            this.Engine.UpdateLaneGuidance(scan.Curvature)
         if !scan || scan.Direction = "" {
             this.LastDirection := ""
             this.SmoothedDemand := 0
@@ -226,7 +236,7 @@ class LaneAssist {
         }
 
         if points.Length < 3 || points[1].Y - points[-1].Y < 0.2
-            return {Status: "Finding lanes", Direction: "", Demand: 0, Estimated: false}
+            return {Status: "Finding lanes", Direction: "", Demand: 0, Estimated: false, Trusted: false}
 
         trusted := measured.Count >= 3
         if trusted {
@@ -240,12 +250,13 @@ class LaneAssist {
         nearX := near.X * 0.7 + points[2].X * 0.3
         farX := points[-1].X * 0.7 + points[-2].X * 0.3
         demand := ((nearX - anchor) * 0.40 + (farX - anchor) * 0.85) / near.Width
+        curvature := Abs(farX - nearX) / near.Width
         status := trusted ? "Lane detected" : "Tracking dashed line"
         if Abs(demand) < 0.075
-            return {Status: status, Direction: "", Demand: 0, Estimated: !trusted}
+            return {Status: status, Direction: "", Demand: 0, Estimated: !trusted, Trusted: trusted, Curvature: curvature}
         direction := demand > 0 ? "d" : "a"
         return {Status: trusted ? (demand > 0 ? "Lane leads right" : "Lane leads left") : status,
-            Direction: direction, Demand: demand, Estimated: !trusted}
+            Direction: direction, Demand: demand, Estimated: !trusted, Trusted: trusted, Curvature: curvature}
     }
 
     ; A marking is a narrow bright stripe relative to the road around it.

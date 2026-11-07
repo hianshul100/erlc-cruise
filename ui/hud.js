@@ -101,7 +101,9 @@ function render(state) {
         dot.classList.remove("on");
     }
 
-    el("target").textContent = state.target;
+    const limited = state.speedActive && Number.isFinite(state.effectiveTarget)
+        && state.effectiveTarget < state.target;
+    el("target").textContent = limited ? state.effectiveTarget + " bend" : state.target;
 
     const speedEl = el("speed");
     if (state.speed < 0) {

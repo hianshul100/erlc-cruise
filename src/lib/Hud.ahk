@@ -246,6 +246,7 @@ class Hud {
             navigation: gNavigation.HudText(),
             debug: st.debug,
             target: st.target,
+            effectiveTarget: Round(engine.EffectiveTarget()),
             speed: st.speed,
             accel: st.accel,
             duty: st.duty,
