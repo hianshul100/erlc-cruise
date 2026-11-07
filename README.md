@@ -6,7 +6,7 @@ maintenance and experimental lane assistance.
 ## Download
 
 [Download the portable Windows app](https://github.com/hianshul100/erlc-cruise/releases/latest)
-and run ERLC-Cruise-Control.exe. Windows 10 or 11 and WebView2 are required.
+and run ERLC-Cruise-Control.exe. To update, quit the app and replace that same file. Windows 10 or 11 and WebView2 are required.
 To run from source, use 64-bit [AutoHotkey v2](https://www.autohotkey.com/)
 and open src/ERLCCruise.ahk.
 
@@ -44,5 +44,6 @@ shows whether it is looking for markings, has detected the lane, or has tapped
 A or D.
 
 Steering looks ahead along lane markings and varies the duration of its
-corrections. Keep the near road and the visible bend inside the lane region.
+corrections. It can briefly bridge a missing dashed marking using the last
+reliable lane and reduces steering strength while doing so. Keep the near road and the visible bend inside the lane region.
 Take over when markings leave the selected view or at abrupt turns.

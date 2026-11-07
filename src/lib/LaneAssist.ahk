@@ -7,6 +7,10 @@ class LaneAssist {
     LastDirection := ""
     SmoothedDemand := 0
     NextPulseAt := 0
+    TrustedAt := 0
+    TrustedRows := Map()
+    ScanWidth := 0
+    ScanHeight := 0
     HeldKey := ""
     ReleaseAt := 0
 
@@ -60,6 +64,7 @@ class LaneAssist {
         this.ReleaseSteering()
         this.LastDirection := ""
         this.SmoothedDemand := 0
+        this.TrustedRows.Clear()
     }
 
     ReleaseSteering() {
@@ -88,6 +93,7 @@ class LaneAssist {
             this.ReleaseSteering()
             this.LastDirection := ""
             this.SmoothedDemand := 0
+            this.TrustedRows.Clear()
             this.ResumeAt := now + 400
             return
         }
@@ -130,10 +136,12 @@ class LaneAssist {
 
         direction := scan.Direction
         duration := LaneAssist.PulseDuration(this.SmoothedDemand)
+        if scan.Estimated
+            duration := Min(duration, 65)
         this.HeldKey := direction
         Send("{" direction " down}")
         this.ReleaseAt := A_TickCount + duration
-        this.NextPulseAt := this.ReleaseAt + 55
+        this.NextPulseAt := this.ReleaseAt + (scan.Estimated ? 85 : 45)
         this.Status := "Steer " StrUpper(direction)
         Logger.Action(Format("Lane assist steered {} for {} ms.", StrUpper(direction), duration))
     }
@@ -168,16 +176,35 @@ class LaneAssist {
     ; Follow lane centers from the foreground into the distance. The search
     ; follows the previous pair so both markings can move to one side in a bend.
     ScanRoad(pixels, w, h) {
+        if w != this.ScanWidth || h != this.ScanHeight {
+            this.TrustedRows.Clear()
+            this.ScanWidth := w
+            this.ScanHeight := h
+        }
+
         anchor := w / 2
         points := []
+        measured := Map()
         searchCenter := anchor
-        for fraction in [0.88, 0.78, 0.68, 0.58, 0.48, 0.38, 0.28, 0.18] {
+        useHistory := A_TickCount - this.TrustedAt <= 240
+        for index, fraction in [0.88, 0.78, 0.68, 0.58, 0.48, 0.38, 0.28, 0.18] {
             row := Round((h - 1) * fraction) * w * 4
+            prior := useHistory ? this.TrustedRows.Get(index, false) : false
             split := Min(w - 14, Max(13, Round(searchCenter)))
             left := this.FindMark(pixels, row, split - 1, 12, -1)
             right := this.FindMark(pixels, row, split + 1, w - 13, 1)
-            if left < 0 || right < 0
-                continue
+            estimated := left < 0 || right < 0
+            if estimated {
+                if !prior || (left < 0 && right < 0)
+                    continue
+                ; Bridge a dashed marking only with a recent, matching edge.
+                if left < 0 && Abs(right - prior.Right) <= prior.Width * 0.22
+                    left := right - prior.Width
+                else if right < 0 && Abs(left - prior.Left) <= prior.Width * 0.22
+                    right := left + prior.Width
+                else
+                    continue
+            }
             laneWidth := right - left
             if laneWidth < w * 0.13 || laneWidth > w * 0.96
                 continue
@@ -189,24 +216,36 @@ class LaneAssist {
                     || Abs(center - searchCenter) > previous.Width * 0.4
                     continue
             }
-            points.Push({Y: fraction, X: center, Width: laneWidth})
+            point := {Y: fraction, X: center, Width: laneWidth, Left: left, Right: right}
+            points.Push(point)
+            if !estimated
+                measured[index] := point
             searchCenter := center
             if points.Length >= 2
                 searchCenter += Max(-w * 0.12, Min(w * 0.12, center - points[-2].X))
         }
 
         if points.Length < 3 || points[1].Y - points[-1].Y < 0.2
-            return {Status: "Finding lanes", Direction: "", Demand: 0}
+            return {Status: "Finding lanes", Direction: "", Demand: 0, Estimated: false}
 
+        trusted := measured.Count >= 3
+        if trusted {
+            this.TrustedAt := A_TickCount
+            this.TrustedRows := measured
+        }
+
+        ; Average nearby and distant centers separately so an isolated stripe
+        ; cannot dominate the steering demand.
         near := points[1]
-        far := points[-1]
-        ; Combine where the car is now with where the lane leads farther ahead.
-        demand := ((near.X - anchor) * 0.40 + (far.X - anchor) * 0.85) / near.Width
+        nearX := near.X * 0.7 + points[2].X * 0.3
+        farX := points[-1].X * 0.7 + points[-2].X * 0.3
+        demand := ((nearX - anchor) * 0.40 + (farX - anchor) * 0.85) / near.Width
+        status := trusted ? "Lane detected" : "Tracking dashed line"
         if Abs(demand) < 0.075
-            return {Status: "Lane detected", Direction: "", Demand: 0}
+            return {Status: status, Direction: "", Demand: 0, Estimated: !trusted}
         direction := demand > 0 ? "d" : "a"
-        return {Status: demand > 0 ? "Lane leads right" : "Lane leads left",
-            Direction: direction, Demand: demand}
+        return {Status: trusted ? (demand > 0 ? "Lane leads right" : "Lane leads left") : status,
+            Direction: direction, Demand: demand, Estimated: !trusted}
     }
 
     ; A marking is a narrow bright stripe relative to the road around it.
