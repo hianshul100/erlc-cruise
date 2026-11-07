@@ -8,7 +8,7 @@
 <body>
     <div class="hud">
         <div class="hud-head">
-            <span class="hud-title">ERLC CRUISE CONTROL</span>
+            <span class="hud-title"><img src="icon.png" alt="">Drive Assist</span>
             <div class="hud-controls">
                 <span class="hud-dot" id="dot"></span>
                 <button type="button" id="toggle-cruise">Start</button>
@@ -16,8 +16,12 @@
             </div>
         </div>
 
-        <div class="hud-status" id="status">CRUISE OFF</div>
+        <div class="hud-mode-row">
+            <button type="button" id="hud-mode" title="Click to change mode">Maintain Speed</button>
+            <div class="hud-status" id="status">READY</div>
+        </div>
 
+        <div id="speed-controls">
         <div class="hud-reads">
             <div class="read" id="target-block">
                 <div class="read-label">TARGET</div>
@@ -41,6 +45,7 @@
 
         <div class="hud-accel" id="accel-block">ACCEL  +0.0 mph/s</div>
         <div class="hud-action" id="action-block">Ready</div>
+        </div>
     </div>
 
     <script src="hud.js"></script>

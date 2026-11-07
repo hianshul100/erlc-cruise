@@ -31,6 +31,7 @@ class Config {
             "Width", 240,
             "Opacity", 255,
             "Visible", 1,
+            "Mode", 1,
             "ShowTarget", 1,
             "ShowSpeed", 1,
             "ShowThrottle", 0,

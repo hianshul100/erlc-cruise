@@ -15,9 +15,12 @@ class Hud {
     Visible := false
     Width := 300
     Ready := false
+    ModeNames := ["Maintain Speed", "Lane Assist Only", "Both"]
 
     __New(engine) {
         this.Engine := engine
+        this.Lane := LaneAssist(engine)
+        this.Mode := Min(3, Max(1, Config.GetInt("Hud", "Mode")))
         this.Build()
         this.ApplyConfig(false)  ; position it but stay hidden until shown
     }
@@ -52,6 +55,7 @@ class Hud {
         ; The page reports its content height so the window fits exactly.
         g.AddCallbackToScript("Resize", (wv, height) => this.OnResize(height))
         g.AddCallbackToScript("ToggleCruise", (*) => this.ToggleCruise())
+        g.AddCallbackToScript("CycleMode", (*) => this.CycleMode())
         g.AddCallbackToScript("CloseHud", (*) => this.SetVisible(false))
 
         if !A_IsCompiled
@@ -111,15 +115,37 @@ class Hud {
     }
 
     ToggleCruise() {
-        if !this.Visible
+        if !this.Visible || this.Engine.Starting
             return
-        this.Engine.Toggle()
+        if this.Engine.Active || this.Lane.Active {
+            this.Stop("Stopped from HUD")
+        } else if !GameWindow.IsActive() {
+            App.Notify("ERLC Cruise Control", "Focus Roblox before clicking Start.")
+        } else {
+            if this.Mode != 2
+                this.Engine.Toggle()
+            if this.Mode = 2 || (this.Mode = 3 && this.Engine.Active)
+                this.Lane.Start(this.Mode = 3)
+        }
         this.Update(this.Engine)
     }
 
-    Hide() {
+    CycleMode() {
+        if this.Engine.Active || this.Engine.Starting || this.Lane.Active
+            return
+        this.Mode := Mod(this.Mode, this.ModeNames.Length) + 1
+        Config.Set("Hud", "Mode", this.Mode)
+        this.Update(this.Engine)
+    }
+
+    Stop(reason) {
+        this.Lane.Stop()
         if this.Engine.Active
-            this.Engine.Stop("HUD hidden")
+            this.Engine.Stop(reason)
+    }
+
+    Hide() {
+        this.Stop("HUD hidden")
         try this.Gui.Hide()
         this.Visible := false
     }
@@ -178,7 +204,10 @@ class Hud {
             return
         st := engine.Status
         payload := JSON.stringify({type: "state", state: {
-            active: st.active,
+            active: engine.Active || this.Lane.Active,
+            speedActive: engine.Active,
+            laneActive: this.Lane.Active,
+            mode: this.ModeNames[this.Mode],
             debug: st.debug,
             target: st.target,
             speed: st.speed,

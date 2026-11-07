@@ -51,6 +51,18 @@ function reportHeight() {
 }
 
 function render(state) {
+    const mode = el("hud-mode");
+    const modeChanged = mode.textContent !== state.mode;
+    if (modeChanged) mode.textContent = state.mode;
+    mode.disabled = !!state.active;
+    const speedControls = el("speed-controls");
+    const hideSpeed = state.mode === "Lane Assist Only";
+    if (Boolean(speedControls.hidden) !== hideSpeed) {
+        speedControls.hidden = hideSpeed;
+        reportHeight();
+    }
+    reportHeight();
+
     const toggle = el("toggle-cruise");
     toggle.textContent = state.active ? "Stop" : "Start";
     toggle.setAttribute("aria-pressed", state.active ? "true" : "false");
@@ -58,17 +70,17 @@ function render(state) {
     const status = el("status");
     const dot = el("dot");
 
-    if (state.debug) {
+    if (state.debug && !state.laneActive) {
         status.textContent = "DEBUG";
         status.style.color = COLORS.debug;
         dot.classList.remove("on");
     } else if (state.active) {
-        status.textContent = "CRUISE ON";
+        status.textContent = state.laneActive && !state.speedActive ? "LANE ON" : "ACTIVE";
         status.style.color = COLORS.on;
         dot.classList.add("on");
     } else {
-        status.textContent = "CRUISE OFF";
-        status.style.color = COLORS.red;
+        status.textContent = "READY";
+        status.style.color = COLORS.dim;
         dot.classList.remove("on");
     }
 
@@ -80,7 +92,7 @@ function render(state) {
         speedEl.style.color = COLORS.faint;
     } else {
         speedEl.textContent = Math.round(state.speed);
-        if (!state.active) {
+        if (!state.speedActive) {
             speedEl.style.color = COLORS.white;
         } else {
             const diff = Math.abs(state.target - state.speed);
@@ -123,4 +135,8 @@ el("toggle-cruise").addEventListener("click", () => {
 });
 el("close-hud").addEventListener("click", () => {
     if (typeof ahk !== "undefined") ahk.CloseHud();
+});
+
+el("hud-mode").addEventListener("click", () => {
+    if (typeof ahk !== "undefined") ahk.CycleMode();
 });

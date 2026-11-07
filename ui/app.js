@@ -153,7 +153,7 @@ function initHotkeyFields(root) {
 // ---------------------------------------------------------------------------
 
 const HOTKEY_FIELDS = [
-    ["Region", "Select region"],
+    ["Region", "Select speedometer region"],
     ["IncrementUp", "Target + increment"],
     ["IncrementDown", "Target − increment"],
     ["Debug", "Debug toggle"],
@@ -298,7 +298,7 @@ function render(state) {
     const r = state.region || {};
     document.getElementById("region-summary").textContent = r.set
         ? `Region: ${r.x}, ${r.y} — ${r.w} x ${r.h} px`
-        : "No region set. Click Select region, then drag over your speedometer.";
+        : "No region set. Click Select Speedometer Region, then drag over your speedometer.";
 
     const dot = document.getElementById("engine-dot");
     const label = document.getElementById("engine-label");

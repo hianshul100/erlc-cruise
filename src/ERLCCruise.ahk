@@ -42,6 +42,7 @@ Persistent
 #Include %A_ScriptDir%\lib\SpeedReader.ahk
 #Include %A_ScriptDir%\lib\GameWindow.ahk
 #Include %A_ScriptDir%\lib\CruiseEngine.ahk
+#Include %A_ScriptDir%\lib\LaneAssist.ahk
 #Include %A_ScriptDir%\lib\RegionSelector.ahk
 #Include %A_ScriptDir%\..\vendor\JSON.ahk
 #Include %A_ScriptDir%\..\vendor\webview\WebViewToo.ahk
@@ -175,9 +176,6 @@ RefreshHud(hud, engine) {
 }
 
 Hotkeys.Register()
-
-if !Config.HasRegion()
-    App.Notify("ERLC Cruise Control", "No speed region set. Use the region hotkey to pick one.")
 
 ; Show the settings window and the HUD on launch. Closing either window hides
 ; it to the tray; the app keeps running.

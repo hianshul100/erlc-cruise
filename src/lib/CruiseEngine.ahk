@@ -1,10 +1,12 @@
-; Reads the speedometer and holds W while cruise is active below the limit.
+; Maintains the target speed using throttle and brief brake pulses.
 
 class CruiseEngine {
     Active := false
     Starting := false
     RawSpeed := -1
     Duty := 0
+    BrakeUntil := 0
+    NextBrakeAt := 0
     Debug := false
     Target := 40
     LastAction := "Ready"
@@ -22,7 +24,7 @@ class CruiseEngine {
         this.BuildStatus()
     }
 
-    ; Re-reads all tuning from Config and applies live changes.
+    ; Refreshes the target displayed while cruise is off.
     Reload() {
         if !this.Active
             this.Target := Config.GetInt("General", "StartTarget")
@@ -68,13 +70,14 @@ class CruiseEngine {
         if (read.Speed < 0) {
             this.LastAction := "Can't read speed"
             Logger.Warn("Start failed: " read.Raw)
-            App.Notify("ERLC Cruise Control", "Could not read the speedometer. Select the speed digits with F5.")
+            App.Notify("ERLC Cruise Control", "Could not read the speedometer. Select Speedometer Region with F5.")
             this.BuildStatus(read.Raw)
             return
         }
 
         if Config.GetBool("General", "LockCurrentSpeedOnToggle")
-            this.Target := read.Speed
+            this.Target := Config.GetBool("General", "LockCurrentSpeedOnToggle")
+            ? read.Speed : this.Target
 
         this.Reader.Reset(read.Speed)
         this.RawSpeed := read.Speed
@@ -156,7 +159,7 @@ class CruiseEngine {
         this.BuildStatus("read " read.Speed)
     }
 
-    ; Release W if Roblox loses focus or the reading is no longer usable.
+    ; Release both keys when the game or a fresh speed reading is unavailable.
     UpdateThrottle() {
         Critical("On")
         if !this.Active
@@ -166,8 +169,33 @@ class CruiseEngine {
             return
         }
 
-        throttle := !this.Debug && this.RawSpeed >= 0 && this.RawSpeed < this.Target
-            && this.Reader.SecondsSinceRead() <= 0.5
+        if this.Debug || this.RawSpeed < 0 || this.Reader.SecondsSinceRead() > 0.5 {
+            this.Duty := 0
+            this.BrakeUntil := 0
+            this.Input.ReleaseAll()
+            return
+        }
+
+        now := A_TickCount
+        overshoot := this.RawSpeed - this.Target
+        if overshoot <= 0
+            this.BrakeUntil := 0
+        if overshoot >= 3 && now >= this.NextBrakeAt {
+            this.BrakeUntil := now + 60
+            this.NextBrakeAt := now + 350
+        }
+
+        if now < this.BrakeUntil {
+            this.Duty := 0
+            this.Input.ReleaseThrottle()
+            this.Input.HoldBrake()
+            return
+        }
+
+        this.Input.ReleaseBrake()
+        ; Ease off before reaching the target when speed is already rising.
+        predictedSpeed := this.RawSpeed + Max(0, this.Reader.Accel) * 0.25
+        throttle := overshoot < 0 && (overshoot <= -2 || predictedSpeed < this.Target)
         this.Duty := throttle ? 1 : 0
         if throttle
             this.Input.HoldThrottle()
@@ -190,7 +218,7 @@ class CruiseEngine {
             speed: this.Reader.LastSpeed,
             accel: this.Reader.Accel,
             duty: this.Duty,
-            brakeDuty: 0,
+            brakeDuty: this.Input.BrakeHeld ? 1 : 0,
             action: this.LastAction,
             note: this.Note,
             regionSet: Config.HasRegion()

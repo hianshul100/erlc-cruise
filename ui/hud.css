@@ -198,3 +198,35 @@ html, body {
 
 #toggle-cruise { min-width: 52px; }
 #close-hud { color: var(--red); font-weight: 700; }
+
+.hud-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text);
+    font-size: 12px;
+    letter-spacing: 0;
+}
+
+.hud-title img { width: 20px; height: 20px; }
+.hud-mode-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.hud-mode-row .hud-status { margin: 0; }
+#hud-mode {
+    -webkit-app-region: no-drag;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    padding: 4px 7px;
+    background: var(--bg-head);
+    color: #a9e9ff;
+    font: 500 11px var(--font);
+    cursor: pointer;
+}
+
+#hud-mode:disabled { cursor: default; opacity: 0.7; }
