@@ -13,6 +13,7 @@ class Navigation {
     MappedRoute := false
     FirstAnchor := false
     MapTransform := false
+    Highway := false
     NextPoint := 1
     Hint := ""
 
@@ -123,6 +124,7 @@ class Navigation {
         point := this.GetSelectedPoint()
         previous := this.LivePosition()
         this.Position := point
+        this.Highway := this.RoadMap.HighwayHint(previous, point, this.MapTransform)
         if !point {
             this.Status := this.PlayerId = "" && this.Players.Length
                 ? "Connected. Choose a player location." : "Connected. Player location unavailable."
@@ -339,6 +341,11 @@ class Navigation {
         return (dz >= 0 ? "South" : "North") (dx >= 0 ? "east" : "west")
     }
 
+    LiveHighway() {
+        return this.Highway && this.LivePosition() && A_TickCount - this.LastRead <= 4500
+            ? this.Highway : false
+    }
+
     HudText() {
         if this.Key = ""
             return ""
@@ -348,6 +355,12 @@ class Navigation {
         place := Trim(point.Street " " point.Postal)
         if place = ""
             place := Format("X {} · Z {}", Round(point.X), Round(point.Z))
+        highway := this.LiveHighway()
+        if highway && !this.Following && !this.Recording {
+            if highway.Turn = ""
+                return highway.Name
+            return highway.Name " · " (highway.Turn = "d" ? "Right bend ahead" : "Left bend ahead")
+        }
         if this.Recording
             return place " · Recording " this.Recording.Length
         if this.Hint != ""

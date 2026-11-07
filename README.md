@@ -72,3 +72,12 @@ Intersection**. Calibration is saved locally and requires no recorded drive.
 Coverage is limited to traced roads and intersections. Routes provide HUD
 directions, with no steering or throttle commands from navigation.
 Map source: https://apidocs.erlc.gg/official-map-images
+
+### Highway look-ahead
+
+After calibrating the map and connecting the API, the app can recognize
+Highway 2 and Highway 55 from the tracked position and direction of travel.
+No destination is required. The HUD names the highway and upcoming bend.
+Both mode can slow early for a mapped bend when the screen also shows a lane.
+A mapped bend only strengthens steering when the screen agrees on direction.
+The app follows the current highway and leaves exit choices to the driver.

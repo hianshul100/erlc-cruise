@@ -128,19 +128,24 @@ class LaneAssist {
         if !this.Active || WinActive(GameWindow.WinTitle()) != hwnd
             || this.IsSteering() || (this.RequiresSpeed && !this.Engine.Active)
             return
+        highway := IsSet(gNavigation) ? gNavigation.LiveHighway() : false
         if this.RequiresSpeed && scan && scan.Trusted
-            this.Engine.UpdateLaneGuidance(scan.Curvature)
+            this.Engine.UpdateLaneGuidance(highway
+                ? Max(scan.Curvature, highway.Curvature) : scan.Curvature)
         if !scan || scan.Direction = "" {
             this.LastDirection := ""
             this.SmoothedDemand := 0
             return
         }
+        demand := scan.Demand
+        if highway && scan.Trusted && scan.Direction = highway.Turn
+            demand *= 1 + Min(0.22, highway.Curvature)
         if scan.Direction != this.LastDirection {
             this.LastDirection := scan.Direction
-            this.SmoothedDemand := scan.Demand
+            this.SmoothedDemand := demand
             return
         }
-        this.SmoothedDemand += (scan.Demand - this.SmoothedDemand) * 0.45
+        this.SmoothedDemand += (demand - this.SmoothedDemand) * 0.45
         if A_TickCount < this.NextPulseAt
             return
 

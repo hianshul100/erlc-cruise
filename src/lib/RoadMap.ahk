@@ -4,6 +4,7 @@ class RoadMap {
     __New() {
         this.Nodes := Map()
         this.Edges := []
+        this.Highways := Map()
         this.Destinations := Map(
             "Freedom Ave / Riverside Drive", "678,1137",
             "Independence Pkwy / Riverside Drive", "678,1012",
@@ -18,8 +19,8 @@ class RoadMap {
         )
         ; Interchanges and bridge crossings are linked only where a road
         ; visibly joins another road. Overpasses do not form intersections.
-        this.AddRoad("1134,126 1134,210 1134,395 1133,475 1119,522 1090,557 1034,612 971,676 909,739 848,798 786,855 749,901 737,950 737,1012 737,1137")
-        this.AddRoad("226,476 286,522 356,565 411,591 463,606 540,616 608,631 642,644 690,672 742,708 787,742 821,774 848,798")
+        this.AddHighway("Highway 55", "1134,126 1134,210 1134,395 1133,475 1119,522 1090,557 1034,612 971,676 909,739 848,798 786,855 749,901 737,950 737,1012 737,1137")
+        this.AddHighway("Highway 2", "226,476 286,522 356,565 411,591 463,606 540,616 608,631 642,644 690,672 742,708 787,742 821,774 848,798")
         this.AddRoad("528,205 568,230 624,263 681,299 709,327 718,371 724,423 728,507 717,546 692,574 655,600 642,625")
         this.AddRoad("642,625 632,643 632,685 640,733 648,784 649,838 660,899 674,955 678,1012 678,1065 678,1137")
         this.AddRoad("642,625 660,646 690,672")
@@ -47,6 +48,97 @@ class RoadMap {
         this.AddRoad("306,934 355,934 410,937 448,937 500,937 550,937 577,925 591,880")
         this.AddRoad("448,937 448,975 448,1012")
         this.AddRoad("923,780 950,813 974,841 1005,872 1028,900 1028,924")
+    }
+
+    AddHighway(name, polyline) {
+        this.AddRoad(polyline)
+        points := []
+        total := 0
+        for id in StrSplit(polyline, " ") {
+            node := this.Nodes[id]
+            if points.Length
+                total += Navigation.Distance(points[-1], node)
+            points.Push({X: node.X, Z: node.Z, Along: total})
+        }
+        this.Highways[name] := points
+    }
+
+    HighwayHint(previous, current, transform) {
+        if !previous || !current || !transform
+            return false
+        a := this.ToMap(previous, transform)
+        b := this.ToMap(current, transform)
+        travel := Navigation.Distance(a, b)
+        if travel < 4 || travel > 145
+            return false
+
+        best := false
+        for name, points in this.Highways {
+            ; Prefer an explicit API road name. Missing names can use geometry.
+            if current.Street != "" && current.Street != name
+                continue
+            here := RoadMap.Project(points, b)
+            before := RoadMap.Project(points, a)
+            if here.Gap > 12 || before.Gap > 14 || Abs(here.Along - before.Along) < 4
+                continue
+            direction := here.Along > before.Along ? 1 : -1
+            tangent := RoadMap.Tangent(points, here.Index, direction)
+            agreement := ((b.X - a.X) * tangent.X + (b.Z - a.Z) * tangent.Z) / travel
+            if agreement < 0.72
+                continue
+            if !best || here.Gap < best.Gap
+                best := {Name: name, Points: points, Here: here, Direction: direction, Gap: here.Gap}
+        }
+        if !best
+            return false
+
+        points := best.Points
+        here := best.Here
+        direction := best.Direction
+        tangent := RoadMap.Tangent(points, here.Index, direction)
+        bend := 0, strongest := 0
+        for distance in [22, 40, 62] {
+            ahead := here.Along + distance * direction
+            if ahead <= 0 || ahead >= points[-1].Along
+                break
+            index := here.Index
+            while index < points.Length - 1 && ahead > points[index + 1].Along
+                index++
+            while index > 1 && ahead < points[index].Along
+                index--
+            next := RoadMap.Tangent(points, index, direction)
+            cross := tangent.X * next.Z - tangent.Z * next.X
+            score := Abs(cross) * (1 - distance / 115)
+            if score > strongest
+                bend := cross, strongest := score
+        }
+        if Abs(bend) < 0.13
+            bend := 0
+        return {Name: best.Name, Turn: bend > 0 ? "d" : bend < 0 ? "a" : "",
+            Curvature: Min(0.42, Abs(bend) * 0.48)}
+    }
+
+    ToMap(world, transform) => {X: (world.X - transform.X) / transform.Scale,
+        Z: (world.Z - transform.Z) / transform.Scale}
+
+    static Project(points, point) {
+        best := {Gap: 1.0e20}
+        Loop points.Length - 1 {
+            a := points[A_Index], b := points[A_Index + 1]
+            length := b.Along - a.Along
+            dx := b.X - a.X, dz := b.Z - a.Z
+            fraction := Max(0, Min(1, ((point.X - a.X) * dx + (point.Z - a.Z) * dz) / length ** 2))
+            gap := Navigation.Distance(point, {X: a.X + dx * fraction, Z: a.Z + dz * fraction})
+            if gap < best.Gap
+                best := {Gap: gap, Along: a.Along + fraction * length, Index: A_Index}
+        }
+        return best
+    }
+
+    static Tangent(points, index, direction) {
+        a := points[index], b := points[index + 1]
+        distance := b.Along - a.Along
+        return {X: direction * (b.X - a.X) / distance, Z: direction * (b.Z - a.Z) / distance}
     }
 
     AddRoad(polyline) {
@@ -84,8 +176,7 @@ class RoadMap {
     Plan(world, destination, transform) {
         if !transform || !this.Destinations.Has(destination)
             return []
-        mapPoint := {X: (world.X - transform.X) / transform.Scale,
-            Z: (world.Z - transform.Z) / transform.Scale}
+        mapPoint := this.ToMap(world, transform)
         best := 18, snap := false
         for edge in this.Edges {
             a := this.Nodes[edge[1]], b := this.Nodes[edge[2]], distance := edge[3]
