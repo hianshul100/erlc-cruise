@@ -46,6 +46,7 @@ Persistent
 #Include %A_ScriptDir%\lib\RegionSelector.ahk
 #Include %A_ScriptDir%\..\vendor\JSON.ahk
 #Include %A_ScriptDir%\lib\Navigation.ahk
+#Include %A_ScriptDir%\lib\RoadMap.ahk
 #Include %A_ScriptDir%\..\vendor\webview\WebViewToo.ahk
 #Include %A_ScriptDir%\lib\Hud.ahk
 #Include %A_ScriptDir%\lib\Ui.ahk

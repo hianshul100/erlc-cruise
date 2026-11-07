@@ -10,12 +10,21 @@ class Navigation {
     Status := "Disconnected"
     Recording := false
     Following := 0
+    MappedRoute := false
+    FirstAnchor := false
+    MapTransform := false
     NextPoint := 1
     Hint := ""
 
     __New() {
         this.Routes := []
         this.Players := []
+        this.RoadMap := RoadMap()
+        try {
+            transform := JSON.parse(Config.Get("Navigation", "MapTransform"), false, false)
+            if IsObject(transform) && transform.Scale > 0
+                this.MapTransform := transform
+        }
         this.RouteFile := Paths.AppDataDir "\routes.json"
         try {
             saved := JSON.parse(FileRead(this.RouteFile, "UTF-8"), false, false)
@@ -224,8 +233,49 @@ class Navigation {
         return "Following " this.Routes[index].Name "."
     }
 
+    CaptureLandmark(name, first) {
+        point := this.LivePosition()
+        if !point
+            return "Wait for a live player position."
+        if !this.RoadMap.Destinations.Has(name)
+            return "Choose the intersection where you are stopped."
+        anchor := {Map: this.RoadMap.Nodes[this.RoadMap.Destinations[name]], World: point}
+        if first {
+            this.FirstAnchor := anchor
+            return "First landmark saved. Drive to a distant mapped intersection."
+        }
+        if !this.FirstAnchor
+            return "Set the first landmark before the second."
+        transform := RoadMap.Calibrate(this.FirstAnchor, anchor)
+        if !transform
+            return "Choose a farther intersection and check the selected landmark."
+        Config.Set("Navigation", "MapTransform", JSON.stringify(transform))
+        this.MapTransform := transform
+        this.StopRoute()
+        return "Road map calibrated."
+    }
+
+    PlanMapped(name) {
+        if !this.MapTransform
+            return "Set two calibration landmarks first."
+        if this.Recording
+            return "Save or cancel the current recording first."
+        point := this.LivePosition()
+        if !point
+            return "Wait for a live player position."
+        points := this.RoadMap.Plan(point, name, this.MapTransform)
+        if !points.Length
+            return "No mapped route from this position. Move to a mapped main road."
+        this.MappedRoute := {Name: name, Points: points}
+        this.Following := -1
+        this.NextPoint := 1
+        this.Advance(point, false)
+        return "Route to " name "."
+    }
+
     StopRoute() {
         this.Following := 0
+        this.MappedRoute := false
         this.Hint := ""
         return "Guidance stopped."
     }
@@ -236,7 +286,7 @@ class Navigation {
     }
 
     Advance(point, previous) {
-        route := this.Routes[this.Following]
+        route := this.Following = -1 ? this.MappedRoute : this.Routes[this.Following]
         while this.NextPoint <= route.Points.Length {
             target := route.Points[this.NextPoint]
             reached := Navigation.Distance(point, target) <= 55
@@ -316,7 +366,10 @@ class Navigation {
         names := []
         for route in this.Routes
             names.Push(route.Name)
-        return {status: this.Status, location: this.HudText(), connected: this.Key != "",
+        destinations := []
+        for name in this.RoadMap.Destinations
+            destinations.Push(name)
+        return {status: this.Status, destinations: destinations, calibrated: !!this.MapTransform, location: this.HudText(), connected: this.Key != "",
             players: this.PlayerOptions(), playerId: this.PlayerId, recording: !!this.Recording, following: !!this.Following, routes: names}
     }
 }

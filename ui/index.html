@@ -144,6 +144,15 @@
                     <p class="hint" id="navigation-status">Disconnected</p>
                 </div>
                 <div class="card">
+                    <label class="card-title" for="navigation-destination">Built-in roads</label>
+                    <p class="hint" id="navigation-calibration">Set two landmarks to align the built-in map with API coordinates.</p>
+                    <p class="hint">Stop at a listed intersection, select it, and set the first landmark. Repeat at a distant listed intersection for the second.</p>
+                    <select class="field" id="navigation-destination"><option value="">Choose an intersection</option></select>
+                    <button class="btn" id="navigation-anchor-first">Set First Landmark</button>
+                    <button class="btn" id="navigation-anchor-second">Set Second Landmark</button>
+                    <button class="btn" id="navigation-plan">Route to Intersection</button>
+                </div>
+                <div class="card">
                     <label class="card-title" for="navigation-routes">Recorded routes</label>
                     <p class="hint">Record a drive once, then follow its waypoints. Directions appear on the HUD.</p>
                     <button class="btn" id="navigation-record">Record Route</button>

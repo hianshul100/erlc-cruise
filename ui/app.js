@@ -437,6 +437,16 @@ function initNavigation() {
         byId("cancel").disabled = !nav.recording;
         byId("follow").disabled = !nav.connected || nav.recording || !nav.routes.length;
         byId("stop").disabled = !nav.following;
+        const destination = byId("destination");
+        if (destination.options.length === 1) {
+            nav.destinations.forEach((name) => destination.add(new Option(name, name)));
+        }
+        byId("calibration").textContent = nav.calibrated
+            ? "Road map calibrated."
+            : "Set two landmarks to align the built-in map with API coordinates.";
+        byId("anchor-first").disabled = !nav.connected;
+        byId("anchor-second").disabled = !nav.connected;
+        byId("plan").disabled = !nav.connected || !nav.calibrated || nav.recording;
         if (lastRoutes === JSON.stringify(nav.routes)) return;
         lastRoutes = JSON.stringify(nav.routes);
         const select = byId("routes");
@@ -454,6 +464,9 @@ function initNavigation() {
         cancel: () => call("NavigationCancel"),
         follow: () => call("NavigationFollow", Number(byId("routes").value)),
         stop: () => call("NavigationStop"),
+        "anchor-first": () => call("NavigationAnchorFirst", byId("destination").value),
+        "anchor-second": () => call("NavigationAnchorSecond", byId("destination").value),
+        plan: () => call("NavigationPlan", byId("destination").value),
     };
     for (const [name, handler] of Object.entries(handlers)) {
         byId(name).addEventListener("click", async () => {

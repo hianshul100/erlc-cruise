@@ -59,5 +59,16 @@ The API pack and a server key are required. No account or Discord login is used.
 The HUD shows your street and postal when available. To save a path, click
 **Record Route**, drive it, then choose **Save Recording**. Select the saved
 route and click **Follow Route** for compass directions to its next waypoint.
-Routes are stored locally. Guidance follows recorded waypoints and does not
-calculate routes through unrecorded roads or send steering inputs.
+Recordings are stored locally. Their guidance follows saved waypoints.
+
+### Built-in road routing
+
+The internal graph traces major corridors from the official ER:LC fall map.
+Connect the API and select your live position. Stop at a listed intersection
+and click **Set First Landmark**. Repeat at a distant listed intersection
+for **Set Second Landmark**. Then choose a destination and click **Route to
+Intersection**. Calibration is saved locally and requires no recorded drive.
+
+Coverage is limited to traced roads and intersections. Routes provide HUD
+directions, with no steering or throttle commands from navigation.
+Map source: https://apidocs.erlc.gg/official-map-images
