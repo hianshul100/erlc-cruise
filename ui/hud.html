@@ -9,7 +9,11 @@
     <div class="hud">
         <div class="hud-head">
             <span class="hud-title">ERLC CRUISE CONTROL</span>
-            <span class="hud-dot" id="dot"></span>
+            <div class="hud-controls">
+                <span class="hud-dot" id="dot"></span>
+                <button type="button" id="toggle-cruise">Start</button>
+                <button type="button" id="close-hud" aria-label="Stop cruise and hide HUD" title="Stop and hide">×</button>
+            </div>
         </div>
 
         <div class="hud-status" id="status">CRUISE OFF</div>

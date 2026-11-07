@@ -1,52 +1,33 @@
 # ERLC Cruise Control
 
-A lightweight AutoHotkey v2 desktop tool that reads your speed from the screen
-using offline OCR and holds it automatically, acting as an in-game cruise
-control for ERLC.
+A Windows cruise-control app for Emergency Response: Liberty County. It reads
+a selected speedometer region with offline OCR and holds W below a chosen
+speed. It releases W at the limit and lets the vehicle coast.
 
-> ERLC Cruise Control is an independent tool and is not affiliated with,
-> endorsed by, or associated with ERLC or Roblox Corporation.
+## Download
 
-## Features
+[Download the portable Windows app](https://github.com/hianshul100/erlc-cruise/releases/latest).
+Run ERLC-Cruise-Control.exe, then follow steps 3 through 5 below.
 
-- Offline OCR of a user-selected speedometer region (no cloud calls).
-- PID-style controller that pulses throttle and brakes to hold a target speed.
-- Always-on-top HUD showing target, speed, throttle, brake, and acceleration.
-- Snipping-tool style region selection with a live preview of what OCR reads.
-- Fully configurable hotkeys, HUD position/opacity, speed increment, and tuning.
-- Configuration and logs saved to `%APPDATA%\ERLCCruise`.
+## Run from source
 
-## Requirements
+1. Install [64-bit AutoHotkey v2](https://www.autohotkey.com/) on Windows 10 or 11.
+2. Download and extract this repository, then run src/ERLCCruise.ahk.
+3. Set the starting target speed in the General settings and save.
+4. With Roblox focused, press **F5** and select the speedometer digits.
+5. Click **Start** on the floating HUD to engage cruise.
 
-- Windows 10/11
-- [AutoHotkey v2](https://www.autohotkey.com/) (to run the script directly)
+## Floating HUD
 
-## Running
+The HUD starts in the top-right corner. Drag its background to move it. The
+app remembers its position and keeps it visible when you switch apps.
 
-1. Install AutoHotkey v2.
-2. Run `src/ERLCCruise.ahk`. The settings window and the HUD both open on
-   launch.
-3. On first run, pick a region over your speedometer using the region selector.
-4. Press the toggle hotkey (default `F6`) to enable cruise.
+- **Start** engages cruise while Roblox is focused. The button changes to **Stop**.
+- **Stop** releases W and returns the button to **Start**.
+- The red **×** stops cruise and hides the HUD. Use **Toggle HUD** in the system tray to reopen it.
+- Switching away from Roblox turns cruise off. Click **Start** again after returning.
 
-The app lives in the system tray. Its menu has three items: **Open GUI**,
-**Toggle HUD**, and **Quit**. Closing the settings window (or the HUD) hides it
-to the tray and the app keeps running; left-click the tray icon to bring the
-settings window back.
+The target is a throttle cutoff. The vehicle can coast above it, for example
+downhill. Configuration and logs are stored in %APPDATA%\ERLCCruise.
 
-Hotkeys only fire while the game window is focused, so typing anywhere else
-never triggers a capture.
-
-## HUD
-
-- Rendered with the same HTML/CSS engine and palette as the settings window, so
-  it matches exactly: dark surface, Outfit font, rounded corners, and smooth
-  rounded throttle/brake bars.
-- Shows target, speed, throttle, brake, acceleration, and the current action.
-- Drag it anywhere on screen (when click-through is off); the position is saved.
-- Every field can be toggled on or off in the **HUD** tab, and its width,
-  opacity, and click-through can be set there too.
-
-## License
-
-MIT. See [LICENSE](./LICENSE).
+ERLC Cruise Control is an independent tool. See [LICENSE](./LICENSE).

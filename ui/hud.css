@@ -178,3 +178,23 @@ html, body {
 }
 
 .hidden { display: none !important; }
+
+.hud-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.hud-controls button {
+    -webkit-app-region: no-drag;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    padding: 4px 8px;
+    background: var(--bg-head);
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+}
+
+#toggle-cruise { min-width: 52px; }
+#close-hud { color: var(--red); font-weight: 700; }

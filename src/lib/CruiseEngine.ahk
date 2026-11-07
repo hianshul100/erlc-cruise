@@ -1,17 +1,10 @@
-; ---------------------------------------------------------------------------
-; CruiseEngine.ahk - the cruise state machine and tick loop.
-;
-; Owns the reader, controller, and input driver; runs a periodic tick that
-; reads speed, updates the controller, and drives pulse-width-modulated throttle
-; and brake. Exposes Toggle/Stop/Adjust/Debug and a status snapshot for the HUD
-; and settings UI.
-;
-; Port of the prototype's Tick()/ToggleCruise()/StopCruise()/AdjustTarget()/
-; ToggleDebug()/Pwm() and its ~s cancel guard.
-; ---------------------------------------------------------------------------
+; Reads the speedometer and holds W while cruise is active below the limit.
 
 class CruiseEngine {
     Active := false
+    Starting := false
+    RawSpeed := -1
+    Duty := 0
     Debug := false
     Target := 40
     LastAction := "Ready"
@@ -21,18 +14,16 @@ class CruiseEngine {
 
     __New() {
         this.Reader := SpeedReader()
-        this.Ctrl := Controller()
         this.Input := InputDriver()
         this.Target := Config.GetInt("General", "StartTarget")
         this.TickFn := this.Tick.Bind(this)
-        this.PwmFn := this.Pwm.Bind(this)
+        this.ThrottleFn := this.UpdateThrottle.Bind(this)
         this.Note := ""
         this.BuildStatus()
     }
 
     ; Re-reads all tuning from Config and applies live changes.
     Reload() {
-        this.Ctrl.LoadConfig()
         if !this.Active
             this.Target := Config.GetInt("General", "StartTarget")
     }
@@ -41,12 +32,12 @@ class CruiseEngine {
 
     StartTimers() {
         SetTimer(this.TickFn, Config.GetInt("General", "UpdateInterval"))
-        SetTimer(this.PwmFn, 20)
+        SetTimer(this.ThrottleFn, 20)
     }
 
     StopTimers() {
         SetTimer(this.TickFn, 0)
-        SetTimer(this.PwmFn, 0)
+        SetTimer(this.ThrottleFn, 0)
     }
 
     ; --- public controls ----------------------------------------------------
@@ -55,11 +46,29 @@ class CruiseEngine {
         if this.Active
             return this.Stop("Toggled off")
 
-        raw := ""
+        if !GameWindow.IsActive() {
+            App.Notify("ERLC Cruise Control", "Focus Roblox before clicking Start.")
+            return
+        }
+        if this.Starting || this.Debug
+            return
+
+        this.Starting := true
+        try {
+            this.Start()
+        } finally {
+            this.Starting := false
+        }
+    }
+
+    Start() {
         read := this.Reader.ReadOnce()
+        if !GameWindow.IsActive() || !gHud.Visible
+            return
         if (read.Speed < 0) {
             this.LastAction := "Can't read speed"
-            Logger.Warn("Toggle failed: " read.Raw)
+            Logger.Warn("Start failed: " read.Raw)
+            App.Notify("ERLC Cruise Control", "Could not read the speedometer. Select the speed digits with F5.")
             this.BuildStatus(read.Raw)
             return
         }
@@ -68,7 +77,7 @@ class CruiseEngine {
             this.Target := read.Speed
 
         this.Reader.Reset(read.Speed)
-        this.Ctrl.PrimeStart(read.Speed)
+        this.RawSpeed := read.Speed
         this.Active := true
         this.LastAction := "Cruise ON, target " this.Target
         Logger.Action("Cruise ON (target " this.Target ", speed " read.Speed ").")
@@ -76,11 +85,9 @@ class CruiseEngine {
     }
 
     Stop(reason := "Cruise off") {
-        if this.Active
-            this.Ctrl.MaybePersist(this.Target, this.Reader.LastSpeed)
         this.Active := false
-        this.Ctrl.Duty := 0
-        this.Ctrl.BrakeDuty := 0
+        this.RawSpeed := -1
+        this.Duty := 0
         this.Input.ReleaseAll()
         this.LastAction := reason
         Logger.Action("Cruise OFF (" reason ").")
@@ -111,7 +118,6 @@ class CruiseEngine {
         this.Debug := !this.Debug
         if this.Debug {
             this.Input.ReleaseAll()
-            this.Ctrl.BrakeDuty := 0
         }
         this.LastAction := this.Debug ? "Debug on (no keys pressed)" : "Debug off"
         Logger.Action(this.LastAction)
@@ -127,8 +133,14 @@ class CruiseEngine {
     ; --- loop ---------------------------------------------------------------
 
     Tick() {
+        if !GameWindow.IsActive()
+            return
         read := this.Reader.ReadOnce()
         state := this.Reader.Update(read.Speed, read.Raw)
+
+        this.RawSpeed := (state = "error" || state = "jumped") ? -1 : read.Speed
+        if this.RawSpeed < 0
+            this.Input.ReleaseThrottle()
 
         if (state = "error") {
             if (this.Active && this.Reader.SecondsSinceRead() > 1.5)
@@ -141,24 +153,23 @@ class CruiseEngine {
             return
         }
 
-        if (this.Active && !this.Debug)
-            this.Ctrl.Step(this.Target, this.Reader.LastSpeed, this.Reader.Accel, this.Reader.LastDt)
-
         this.BuildStatus("read " read.Speed)
     }
 
-    ; Pulse-width modulation: holds throttle for duty% of each PWM cycle.
-    Pwm() {
-        if (!this.Active || this.Debug)
+    ; Release W if Roblox loses focus or the reading is no longer usable.
+    UpdateThrottle() {
+        Critical("On")
+        if !this.Active
             return
-        if (this.Ctrl.BrakeDuty > 0) {
-            this.Input.ReleaseThrottle()
-            this.Input.HoldBrake()
+        if !GameWindow.IsActive() {
+            this.Stop("Roblox lost focus")
             return
         }
-        this.Input.ReleaseBrake()
-        phase := Mod(A_TickCount, this.Ctrl.PwmPeriod) / this.Ctrl.PwmPeriod
-        if (this.Ctrl.Duty >= 1 || (this.Ctrl.Duty > 0 && phase < this.Ctrl.Duty))
+
+        throttle := !this.Debug && this.RawSpeed >= 0 && this.RawSpeed < this.Target
+            && this.Reader.SecondsSinceRead() <= 0.5
+        this.Duty := throttle ? 1 : 0
+        if throttle
             this.Input.HoldThrottle()
         else
             this.Input.ReleaseThrottle()
@@ -178,8 +189,8 @@ class CruiseEngine {
             target: this.Target,
             speed: this.Reader.LastSpeed,
             accel: this.Reader.Accel,
-            duty: this.Ctrl.Duty,
-            brakeDuty: this.Ctrl.BrakeDuty,
+            duty: this.Duty,
+            brakeDuty: 0,
             action: this.LastAction,
             note: this.Note,
             regionSet: Config.HasRegion()

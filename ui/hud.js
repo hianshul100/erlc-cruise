@@ -51,6 +51,10 @@ function reportHeight() {
 }
 
 function render(state) {
+    const toggle = el("toggle-cruise");
+    toggle.textContent = state.active ? "Stop" : "Start";
+    toggle.setAttribute("aria-pressed", state.active ? "true" : "false");
+
     const status = el("status");
     const dot = el("dot");
 
@@ -113,3 +117,10 @@ if (window.chrome && window.chrome.webview) {
     });
     window.addEventListener("load", reportHeight);
 }
+
+el("toggle-cruise").addEventListener("click", () => {
+    if (typeof ahk !== "undefined") ahk.ToggleCruise();
+});
+el("close-hud").addEventListener("click", () => {
+    if (typeof ahk !== "undefined") ahk.CloseHud();
+});

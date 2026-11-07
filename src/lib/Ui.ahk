@@ -95,7 +95,6 @@ class Ui {
             },
             hotkeys: {
                 Region: Config.GetHotkey("Region"),
-                Toggle: Config.GetHotkey("Toggle"),
                 IncrementUp: Config.GetHotkey("IncrementUp"),
                 IncrementDown: Config.GetHotkey("IncrementDown"),
                 Debug: Config.GetHotkey("Debug"),
@@ -103,27 +102,12 @@ class Ui {
                 Settings: Config.GetHotkey("Settings"),
                 ToggleHud: Config.GetHotkey("ToggleHud")
             },
-            controller: {
-                PwmPeriod: Config.GetInt("Controller", "PwmPeriod"),
-                Kp: Config.GetFloat("Controller", "Kp"),
-                Ki: Config.GetFloat("Controller", "Ki"),
-                Kd: Config.GetFloat("Controller", "Kd"),
-                FullThrottleGap: Config.GetInt("Controller", "FullThrottleGap"),
-                BrakeSoftGap: Config.GetInt("Controller", "BrakeSoftGap"),
-                BrakeHardGap: Config.GetInt("Controller", "BrakeHardGap"),
-                BrakeAccelThreshold: Config.GetFloat("Controller", "BrakeAccelThreshold"),
-                BrakeReleaseGap: Config.GetFloat("Controller", "BrakeReleaseGap"),
-                BrakeLookahead: Config.GetFloat("Controller", "BrakeLookahead"),
-                MinBrakeHold: Config.GetInt("Controller", "MinBrakeHold"),
-                MinBrakeSpeed: Config.GetInt("Controller", "MinBrakeSpeed")
-            },
             hud: {
                 X: Config.GetInt("Hud", "X"),
                 Y: Config.GetInt("Hud", "Y"),
                 Width: Config.GetInt("Hud", "Width"),
                 Opacity: Config.GetInt("Hud", "Opacity"),
                 Visible: Config.GetBool("Hud", "Visible"),
-                ClickThrough: Config.GetBool("Hud", "ClickThrough"),
                 ShowTarget: Config.GetBool("Hud", "ShowTarget"),
                 ShowSpeed: Config.GetBool("Hud", "ShowSpeed"),
                 ShowThrottle: Config.GetBool("Hud", "ShowThrottle"),
@@ -197,7 +181,6 @@ class Ui {
             ; Hotkeys
             hk := state.hotkeys
             Config.SetHotkey("Region", this.CleanHotkey(hk.Region))
-            Config.SetHotkey("Toggle", this.CleanHotkey(hk.Toggle))
             Config.SetHotkey("IncrementUp", this.CleanHotkey(hk.IncrementUp))
             Config.SetHotkey("IncrementDown", this.CleanHotkey(hk.IncrementDown))
             Config.SetHotkey("Debug", this.CleanHotkey(hk.Debug))
@@ -205,28 +188,12 @@ class Ui {
             Config.SetHotkey("Settings", this.CleanHotkey(hk.Settings))
             Config.SetHotkey("ToggleHud", this.CleanHotkey(hk.ToggleHud))
 
-            ; Controller
-            ctrl := state.controller
-            Config.Set("Controller", "PwmPeriod", this.CleanNumber(ctrl.PwmPeriod))
-            Config.Set("Controller", "Kp", this.CleanNumber(ctrl.Kp))
-            Config.Set("Controller", "Ki", this.CleanNumber(ctrl.Ki))
-            Config.Set("Controller", "Kd", this.CleanNumber(ctrl.Kd))
-            Config.Set("Controller", "FullThrottleGap", this.CleanNumber(ctrl.FullThrottleGap))
-            Config.Set("Controller", "BrakeSoftGap", this.CleanNumber(ctrl.BrakeSoftGap))
-            Config.Set("Controller", "BrakeHardGap", this.CleanNumber(ctrl.BrakeHardGap))
-            Config.Set("Controller", "BrakeAccelThreshold", this.CleanNumber(ctrl.BrakeAccelThreshold))
-            Config.Set("Controller", "BrakeReleaseGap", this.CleanNumber(ctrl.BrakeReleaseGap))
-            Config.Set("Controller", "BrakeLookahead", this.CleanNumber(ctrl.BrakeLookahead))
-            Config.Set("Controller", "MinBrakeHold", this.CleanNumber(ctrl.MinBrakeHold))
-            Config.Set("Controller", "MinBrakeSpeed", this.CleanNumber(ctrl.MinBrakeSpeed))
-
             ; HUD
             Config.Set("Hud", "X", this.ToInt(state.hud.X, 20))
             Config.Set("Hud", "Y", this.ToInt(state.hud.Y, 20))
             Config.Set("Hud", "Width", Max(200, this.ToInt(state.hud.Width, 300)))
             Config.Set("Hud", "Opacity", Min(255, Max(30, this.ToInt(state.hud.Opacity, 235))))
             Config.Set("Hud", "Visible", state.hud.Visible ? 1 : 0)
-            Config.Set("Hud", "ClickThrough", state.hud.ClickThrough ? 1 : 0)
             Config.Set("Hud", "ShowTarget", state.hud.ShowTarget ? 1 : 0)
             Config.Set("Hud", "ShowSpeed", state.hud.ShowSpeed ? 1 : 0)
             Config.Set("Hud", "ShowThrottle", state.hud.ShowThrottle ? 1 : 0)

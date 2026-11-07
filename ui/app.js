@@ -14,16 +14,11 @@ const mockState = {
     general: { startTarget: 40, increment: 5, updateInterval: 100, lockOnToggle: false },
     settings: { logging: true, gameProcess: "RobloxPlayerBeta.exe" },
     hotkeys: {
-        Region: "F5", Toggle: "F6", IncrementUp: "F7", IncrementDown: "F8",
+        Region: "F5", IncrementUp: "F7", IncrementDown: "F8",
         Debug: "F9", Cancel: "~s", Settings: "F10", ToggleHud: "F11",
     },
-    controller: {
-        PwmPeriod: 300, Kp: 0.08, Ki: 0.02, Kd: 0.05, FullThrottleGap: 10,
-        BrakeSoftGap: 4, BrakeHardGap: 8, BrakeAccelThreshold: 2.0,
-        BrakeReleaseGap: 1.5, BrakeLookahead: 0.6, MinBrakeHold: 500, MinBrakeSpeed: 8,
-    },
     hud: {
-        X: 20, Y: 20, Width: 300, Opacity: 235, Visible: true, ClickThrough: false,
+        X: 20, Y: 20, Width: 300, Opacity: 235, Visible: true,
         ShowTarget: true, ShowSpeed: true, ShowThrottle: true, ShowBrake: true, ShowAccel: true, ShowAction: true,
     },
     ocr: { Language: "en-us", Scale: 3, Grayscale: false, InvertColors: false, Monochrome: 0 },
@@ -159,7 +154,6 @@ function initHotkeyFields(root) {
 
 const HOTKEY_FIELDS = [
     ["Region", "Select region"],
-    ["Toggle", "Cruise on/off"],
     ["IncrementUp", "Target + increment"],
     ["IncrementDown", "Target − increment"],
     ["Debug", "Debug toggle"],
@@ -168,26 +162,8 @@ const HOTKEY_FIELDS = [
     ["ToggleHud", "Toggle HUD"],
 ];
 
-const PID_FIELDS = [
-    ["Kp", "Kp", 0.01],
-    ["Ki", "Ki", 0.005],
-    ["Kd", "Kd", 0.01],
-];
 
-const GAP_FIELDS = [
-    ["PwmPeriod", "PWM period (ms)", 10],
-    ["FullThrottleGap", "Full-throttle gap (mph)", 1],
-];
 
-const BRAKE_FIELDS = [
-    ["BrakeSoftGap", "Soft gap (mph)", 1],
-    ["BrakeHardGap", "Hard gap (mph)", 1],
-    ["BrakeAccelThreshold", "Accel threshold (mph/s)", 0.1],
-    ["BrakeReleaseGap", "Release gap (mph)", 0.1],
-    ["BrakeLookahead", "Lookahead (s)", 0.1],
-    ["MinBrakeHold", "Min hold (ms)", 50],
-    ["MinBrakeSpeed", "Min speed (mph)", 1],
-];
 
 const HUD_FIELDS = [
     ["X", "X", 1],
@@ -308,13 +284,9 @@ function render(state) {
     renderHotkeys(state.hotkeys || {});
 
     // Tuning
-    renderGrid("pid-grid", PID_FIELDS, state.controller);
-    renderGrid("gap-grid", GAP_FIELDS, state.controller);
-    renderGrid("brake-grid", BRAKE_FIELDS, state.controller);
 
     // HUD
     document.getElementById("hudVisible").checked = !!state.hud.Visible;
-    document.getElementById("hudClickThrough").checked = !!state.hud.ClickThrough;
     renderHudToggles(state.hud);
     renderGrid("hud-grid", HUD_FIELDS, state.hud);
 
@@ -404,9 +376,8 @@ function collect() {
             gameProcess: num("gameProcess"),
         },
         hotkeys,
-        controller: Object.assign({}, collectGrid("pid-grid"), collectGrid("gap-grid"), collectGrid("brake-grid")),
         hud: Object.assign(
-            { Visible: document.getElementById("hudVisible").checked, ClickThrough: document.getElementById("hudClickThrough").checked },
+            { Visible: document.getElementById("hudVisible").checked },
             collectHudToggles(),
             collectGrid("hud-grid")
         ),
@@ -466,16 +437,6 @@ function initActions() {
             await Bridge.testRead();
         } catch (e) {
             setStatus("Test failed: " + e, "err");
-        }
-    });
-
-    document.getElementById("reset-tuning").addEventListener("click", async () => {
-        if (!confirm("Reset ALL settings to their defaults?")) return;
-        try {
-            render(await Bridge.resetDefaults());
-            setStatus("Defaults restored.", "ok");
-        } catch (e) {
-            setStatus("Reset failed: " + e, "err");
         }
     });
 

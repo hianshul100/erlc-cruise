@@ -39,7 +39,6 @@ Persistent
 #Include %A_ScriptDir%\lib\OCR.ahk
 #Include %A_ScriptDir%\lib\SpeedParser.ahk
 #Include %A_ScriptDir%\lib\InputDriver.ahk
-#Include %A_ScriptDir%\lib\Controller.ahk
 #Include %A_ScriptDir%\lib\SpeedReader.ahk
 #Include %A_ScriptDir%\lib\GameWindow.ahk
 #Include %A_ScriptDir%\lib\CruiseEngine.ahk
@@ -53,7 +52,7 @@ Persistent
 ; Every hotkey fires only while the game window is focused, so typing in any
 ; other application never triggers a capture, region pick, or cruise action.
 class Hotkeys {
-    static Keys := ["Region", "Settings", "ToggleHud", "Toggle", "IncrementUp", "IncrementDown", "Debug", "Cancel"]
+    static Keys := ["Region", "Settings", "ToggleHud", "IncrementUp", "IncrementDown", "Debug", "Cancel"]
     static Registered := []
 
     ; Clears previous registrations and re-registers everything from Config.
@@ -62,7 +61,6 @@ class Hotkeys {
             "Region", (*) => App.SelectRegion(),
             "Settings", (*) => App.OpenSettings(),
             "ToggleHud", (*) => App.ToggleHud(),
-            "Toggle", (*) => gEngine.Toggle(),
             "IncrementUp", (*) => gEngine.IncrementUp(),
             "IncrementDown", (*) => gEngine.IncrementDown(),
             "Debug", (*) => gEngine.ToggleDebug(),
@@ -168,7 +166,7 @@ gEngine.Input.InstallExitRelease()
 gEngine.StartTimers()
 Logger.Info("Engine initialised.")
 
-global gHud := Hud()
+global gHud := Hud(gEngine)
 SetTimer(RefreshHud.Bind(gHud, gEngine), 100)
 Logger.Info("HUD initialised.")
 
@@ -190,7 +188,7 @@ try {
     Logger.Exception(e, "Open settings on startup")
     App.Notify("ERLC Cruise Control", "Could not open the settings window: " e.Message)
 }
-gHud.SetVisible(true)
+gHud.ApplyConfig()
 
 ; --- tray --------------------------------------------------------------------
 A_IconTip := "ERLC Cruise Control"
@@ -202,5 +200,5 @@ Tray.Add("Open GUI", (*) => App.OpenSettings())
 Tray.Add("Toggle HUD", (*) => App.ToggleHud())
 Tray.Add()
 Tray.Add("Quit", (*) => App.Quit())
-Tray.Default := "Open GUI"
-Tray.ClickCount := 1  ; single left-click opens the settings window
+Tray.Default := "Toggle HUD"
+Tray.ClickCount := 1  ; single left-click toggles the HUD

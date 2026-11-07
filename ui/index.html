@@ -28,7 +28,6 @@
             <nav class="nav" id="nav">
                 <button class="nav-item is-active" data-tab="general">General</button>
                 <button class="nav-item" data-tab="hotkeys">Hotkeys</button>
-                <button class="nav-item" data-tab="tuning">Tuning</button>
                 <button class="nav-item" data-tab="hud">HUD</button>
                 <button class="nav-item" data-tab="ocr">OCR &amp; Region</button>
                 <button class="nav-item" data-tab="about">About</button>
@@ -85,37 +84,12 @@
                 </div>
             </section>
 
-            <section class="page" data-page="tuning">
-                <div class="card">
-                    <label class="card-title">Throttle PID</label>
-                    <p class="hint">Reaction to speed error. Leave as-is unless you know what you're doing.</p>
-                    <div class="grid" id="pid-grid"></div>
-                </div>
-                <div class="card">
-                    <label class="card-title">Throttle gaps</label>
-                    <div class="grid" id="gap-grid"></div>
-                </div>
-                <div class="card">
-                    <label class="card-title">Braking</label>
-                    <div class="grid" id="brake-grid"></div>
-                </div>
-                <div class="card">
-                    <p class="hint">Tip: the default values are tuned for a stable road cruise. Increase Kp for faster response, Kd to damp overshoot.</p>
-                    <button class="btn btn-ghost" id="reset-tuning">Reset tuning to defaults</button>
-                </div>
-            </section>
-
             <section class="page" data-page="hud">
                 <div class="card">
                     <label class="switch">
                         <input type="checkbox" id="hudVisible">
                         <span class="switch-track"><span class="switch-thumb"></span></span>
                         <span class="switch-label">Show the HUD overlay</span>
-                    </label>
-                    <label class="switch">
-                        <input type="checkbox" id="hudClickThrough">
-                        <span class="switch-track"><span class="switch-thumb"></span></span>
-                        <span class="switch-label">Click-through (never captures the mouse)</span>
                     </label>
                 </div>
                 <div class="card">

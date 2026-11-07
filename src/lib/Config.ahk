@@ -18,7 +18,6 @@ class Config {
         ),
         "Hotkeys", Map(
             "Region", "F5",
-            "Toggle", "F6",
             "IncrementUp", "F7",
             "IncrementDown", "F8",
             "Debug", "F9",
@@ -26,33 +25,18 @@ class Config {
             "Settings", "F10",
             "ToggleHud", "F11"
         ),
-        "Controller", Map(
-            "PwmPeriod", 300,
-            "Kp", "0.08",
-            "Ki", "0.02",
-            "Kd", "0.05",
-            "FullThrottleGap", 10,
-            "BrakeSoftGap", 4,
-            "BrakeHardGap", 8,
-            "BrakeAccelThreshold", "2.0",
-            "BrakeReleaseGap", "1.5",
-            "BrakeLookahead", "0.6",
-            "MinBrakeHold", 500,
-            "MinBrakeSpeed", 8
-        ),
         "Hud", Map(
-            "X", 20,
+            "X", Max(0, A_ScreenWidth - 260),
             "Y", 20,
-            "Width", 300,
-            "Opacity", 235,
+            "Width", 240,
+            "Opacity", 255,
             "Visible", 1,
-            "ClickThrough", 0,
             "ShowTarget", 1,
             "ShowSpeed", 1,
-            "ShowThrottle", 1,
-            "ShowBrake", 1,
-            "ShowAccel", 1,
-            "ShowAction", 1
+            "ShowThrottle", 0,
+            "ShowBrake", 0,
+            "ShowAccel", 0,
+            "ShowAction", 0
         ),
         "Region", Map(
             "X", 0,

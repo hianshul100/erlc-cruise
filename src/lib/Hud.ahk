@@ -4,7 +4,7 @@
 ; Renders the HUD with real HTML/CSS (ui\hud.html + hud.css) so it matches the
 ; settings window exactly: black surface, Outfit font, rounded corners, and
 ; smooth rounded throttle/brake bars. Position, width, opacity, visible,
-; click-through, and which fields are shown all come from Config.
+; and which fields are shown all come from Config.
 ;
 ; The overlay is drag-movable via CSS (-webkit-app-region: drag). The new
 ; position is detected and saved back to Config.
@@ -13,27 +13,25 @@
 class Hud {
     Gui := ""
     Visible := false
-    ClickThrough := false
     Width := 300
     Ready := false
 
-    __New() {
+    __New(engine) {
+        this.Engine := engine
         this.Build()
         this.ApplyConfig(false)  ; position it but stay hidden until shown
     }
 
     Build() {
-        ; Destroy any previous overlay (e.g. when rebuilding for a click-through change).
+        ; Dispose of any previous overlay before rebuilding.
         if (this.Gui != "" && this.Gui.Hwnd) {
             try this.Gui.Destroy()
         }
 
-        this.ClickThrough := Config.GetBool("Hud", "ClickThrough")
         this.Width := Max(200, Config.GetInt("Hud", "Width"))
 
-        opt := "+AlwaysOnTop -Caption -Resize +ToolWindow"
-        if this.ClickThrough
-            opt .= " +E0x20"        ; WS_EX_TRANSPARENT
+        ; WS_EX_NOACTIVATE keeps Roblox focused when the HUD is clicked.
+        opt := "+AlwaysOnTop -Caption -Resize +ToolWindow +E0x08000000"
 
         settings := { DataDir: Paths.WebViewHudDataDir, DefaultWidth: this.Width, DefaultHeight: 240 }
         if (A_IsCompiled) {
@@ -53,12 +51,14 @@ class Hud {
         g.NavigationCompleted((*) => this.OnReady())
         ; The page reports its content height so the window fits exactly.
         g.AddCallbackToScript("Resize", (wv, height) => this.OnResize(height))
+        g.AddCallbackToScript("ToggleCruise", (*) => this.ToggleCruise())
+        g.AddCallbackToScript("CloseHud", (*) => this.SetVisible(false))
 
         if !A_IsCompiled
             g.BrowseFolder(Paths.UiDir)
         g.Navigate("hud.html")
 
-        g.OnEvent("Close", (*) => this.Hide())
+        g.OnEvent("Close", (*) => this.SetVisible(false))
     }
 
     ; Called once the HUD page has loaded.
@@ -110,18 +110,22 @@ class Hud {
         this.PushConfig()
     }
 
+    ToggleCruise() {
+        if !this.Visible
+            return
+        this.Engine.Toggle()
+        this.Update(this.Engine)
+    }
+
     Hide() {
+        if this.Engine.Active
+            this.Engine.Stop("HUD hidden")
         try this.Gui.Hide()
         this.Visible := false
     }
 
-    ; Applies position, width, opacity, visibility, click-through, and field
-    ; visibility from Config. Rebuilds when the click-through style changed
-    ; (WS_EX_TRANSPARENT cannot be toggled on a live window).
+    ; Applies the saved position, size, opacity, and visibility.
     ApplyConfig(showHud := true) {
-        if (Config.GetBool("Hud", "ClickThrough") != this.ClickThrough)
-            this.Build()
-
         this.Width := Max(200, Config.GetInt("Hud", "Width"))
         if (this.Gui != "" && this.Gui.Hwnd) {
             this.Gui.Move(Config.GetInt("Hud", "X"), Config.GetInt("Hud", "Y"), this.Width)
@@ -157,12 +161,6 @@ class Hud {
     ToggleVisible() {
         this.SetVisible(!this.Visible)
         Logger.Action("HUD " (this.Visible ? "shown" : "hidden") ".")
-    }
-
-    SetClickThrough(on) {
-        Config.Set("Hud", "ClickThrough", on ? 1 : 0)
-        this.ApplyConfig()
-        Logger.Action("HUD click-through " (on ? "on" : "off") ".")
     }
 
     SetPosition(x, y) {
