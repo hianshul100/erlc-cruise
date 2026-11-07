@@ -42,3 +42,7 @@ ERLC Cruise Control is an independent tool. See [LICENSE](./LICENSE).
 The HUD shows **Select Lane Region** if no lane box is saved. While active it
 shows whether it is looking for markings, has detected the lane, or has tapped
 A or D.
+
+Steering looks ahead along lane markings and varies the duration of its
+corrections. Keep the near road and the visible bend inside the lane region.
+Take over when markings leave the selected view or at abrupt turns.

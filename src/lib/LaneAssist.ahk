@@ -1,10 +1,12 @@
-; Nudges toward the lane when two successive road scans agree.
+; Tracks the lane ahead and applies bounded steering pulses.
 class LaneAssist {
     Active := false
     Status := "Ready"
     RequiresSpeed := false
     ResumeAt := 0
     LastDirection := ""
+    SmoothedDemand := 0
+    NextPulseAt := 0
     HeldKey := ""
     ReleaseAt := 0
 
@@ -45,6 +47,7 @@ class LaneAssist {
         InstallKeybdHook()
         this.RequiresSpeed := requiresSpeed
         this.ResumeAt := A_TickCount + 400
+        this.NextPulseAt := 0
         this.Status := "Finding lanes"
         this.Active := true
         SetTimer(this.UpdateFn, 20)
@@ -56,6 +59,7 @@ class LaneAssist {
         SetTimer(this.UpdateFn, 0)
         this.ReleaseSteering()
         this.LastDirection := ""
+        this.SmoothedDemand := 0
     }
 
     ReleaseSteering() {
@@ -83,12 +87,13 @@ class LaneAssist {
             this.Status := "Manual steering"
             this.ReleaseSteering()
             this.LastDirection := ""
+            this.SmoothedDemand := 0
             this.ResumeAt := now + 400
             return
         }
         if this.HeldKey != "" && now >= this.ReleaseAt
             this.ReleaseSteering()
-        if now < this.ResumeAt
+        if this.HeldKey != "" || now < this.ResumeAt
             return
 
         hwnd := WinActive(GameWindow.WinTitle())
@@ -102,29 +107,43 @@ class LaneAssist {
         right := Min(width - 1, Round(width * r.X2 / 10000))
         top := Round(height * r.Y1 / 10000)
         bottom := Min(height - 1, Round(height * r.Y2 / 10000))
-        direction := this.FindDirection(screenX + left, screenY + top, right - left, bottom - top)
-        confirmed := direction != "" && direction = this.LastDirection
-        this.LastDirection := direction
-        this.ResumeAt := A_TickCount + 90
+        scan := this.FindDirection(screenX + left, screenY + top, right - left, bottom - top)
+        this.ResumeAt := A_TickCount + 50
 
         Critical("On")
-        if !confirmed || !this.Active || WinActive(GameWindow.WinTitle()) != hwnd
+        if !this.Active || WinActive(GameWindow.WinTitle()) != hwnd
             || this.IsSteering() || (this.RequiresSpeed && !this.Engine.Active)
             return
+        if !scan || scan.Direction = "" {
+            this.LastDirection := ""
+            this.SmoothedDemand := 0
+            return
+        }
+        if scan.Direction != this.LastDirection {
+            this.LastDirection := scan.Direction
+            this.SmoothedDemand := scan.Demand
+            return
+        }
+        this.SmoothedDemand += (scan.Demand - this.SmoothedDemand) * 0.45
+        if A_TickCount < this.NextPulseAt
+            return
 
-        this.Status := "Steer " StrUpper(direction)
-        Logger.Action("Lane assist tapped " StrUpper(direction) ".")
+        direction := scan.Direction
+        duration := LaneAssist.PulseDuration(this.SmoothedDemand)
         this.HeldKey := direction
         Send("{" direction " down}")
-        this.ReleaseAt := A_TickCount + 35
-        this.ResumeAt := A_TickCount + 350
-        this.LastDirection := ""
+        this.ReleaseAt := A_TickCount + duration
+        this.NextPulseAt := this.ReleaseAt + 55
+        this.Status := "Steer " StrUpper(direction)
+        Logger.Action(Format("Lane assist steered {} for {} ms.", StrUpper(direction), duration))
     }
+
+    static PulseDuration(demand) => Round(Min(115, Max(32, 20 + Abs(demand) * 230)))
 
     FindDirection(x, y, width, height) {
         if width < 40 || height < 40 {
             this.Status := "Region too small"
-            return ""
+            return false
         }
         scale := Min(1, Max(40 / height, 360 / width))
         w := Ceil(width * scale)
@@ -139,41 +158,55 @@ class LaneAssist {
                 throw Error("Screen capture returned no rows")
         } catch {
             this.Status := "Road view unavailable"
-            return ""
+            return false
         }
         result := this.ScanRoad(pixels, w, h)
         this.Status := result.Status
-        return result.Direction
+        return result
     }
 
-    ; Scan several rows so a gap in a dashed line does not reject the frame.
+    ; Follow lane centers from the foreground into the distance. The search
+    ; follows the previous pair so both markings can move to one side in a bend.
     ScanRoad(pixels, w, h) {
-        center := w // 2
-        pairs := 0, leftVotes := 0, rightVotes := 0
-        for fraction in [0.18, 0.28, 0.38, 0.48, 0.58, 0.68, 0.78, 0.88] {
+        anchor := w / 2
+        points := []
+        searchCenter := anchor
+        for fraction in [0.88, 0.78, 0.68, 0.58, 0.48, 0.38, 0.28, 0.18] {
             row := Round((h - 1) * fraction) * w * 4
-            left := this.FindMark(pixels, row, center - 1, 12, -1)
-            right := this.FindMark(pixels, row, center + 1, w - 13, 1)
+            split := Min(w - 14, Max(13, Round(searchCenter)))
+            left := this.FindMark(pixels, row, split - 1, 12, -1)
+            right := this.FindMark(pixels, row, split + 1, w - 13, 1)
             if left < 0 || right < 0
                 continue
             laneWidth := right - left
-            if laneWidth < w * 0.16 || laneWidth > w * 0.96
+            if laneWidth < w * 0.13 || laneWidth > w * 0.96
                 continue
-            pairs++
-            offset := ((left + right) / 2 - center) / laneWidth
-            if offset > 0.14
-                rightVotes++
-            else if offset < -0.14
-                leftVotes++
+
+            center := (left + right) / 2
+            if points.Length {
+                previous := points[-1]
+                if laneWidth < previous.Width * 0.55 || laneWidth > previous.Width * 1.2
+                    || Abs(center - searchCenter) > previous.Width * 0.4
+                    continue
+            }
+            points.Push({Y: fraction, X: center, Width: laneWidth})
+            searchCenter := center
+            if points.Length >= 2
+                searchCenter += Max(-w * 0.12, Min(w * 0.12, center - points[-2].X))
         }
 
-        if pairs < 2
-            return {Status: "Finding lanes", Direction: ""}
-        if rightVotes >= 2 && rightVotes * 2 > pairs
-            return {Status: "Near left line", Direction: "d"}
-        if leftVotes >= 2 && leftVotes * 2 > pairs
-            return {Status: "Near right line", Direction: "a"}
-        return {Status: "Lane detected", Direction: ""}
+        if points.Length < 3 || points[1].Y - points[-1].Y < 0.2
+            return {Status: "Finding lanes", Direction: "", Demand: 0}
+
+        near := points[1]
+        far := points[-1]
+        ; Combine where the car is now with where the lane leads farther ahead.
+        demand := ((near.X - anchor) * 0.40 + (far.X - anchor) * 0.85) / near.Width
+        if Abs(demand) < 0.075
+            return {Status: "Lane detected", Direction: "", Demand: 0}
+        direction := demand > 0 ? "d" : "a"
+        return {Status: demand > 0 ? "Lane leads right" : "Lane leads left",
+            Direction: direction, Demand: demand}
     }
 
     ; A marking is a narrow bright stripe relative to the road around it.
