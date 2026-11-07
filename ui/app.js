@@ -416,12 +416,22 @@ function initTitleBar() {
 function initNavigation() {
     const byId = (id) => document.getElementById("navigation-" + id);
     let lastRoutes = "";
+    let lastPlayers = "";
     async function refresh() {
         const raw = await call("NavigationState");
         if (!raw) return;
         const nav = JSON.parse(raw);
         byId("status").textContent = nav.location || nav.status;
         byId("disconnect").disabled = !nav.connected;
+        const playerList = byId("player");
+        playerList.disabled = !nav.connected || nav.recording || !nav.players.length;
+        const players = JSON.stringify(nav.players);
+        if (lastPlayers !== players) {
+            lastPlayers = players;
+            playerList.replaceChildren(new Option("Choose a location", ""));
+            nav.players.forEach((player) => playerList.add(new Option(player.name, player.id)));
+        }
+        playerList.value = nav.playerId || "";
         byId("record").disabled = !nav.connected && !nav.recording;
         byId("record").textContent = nav.recording ? "Save Recording" : "Record Route";
         byId("cancel").disabled = !nav.recording;
@@ -438,7 +448,7 @@ function initNavigation() {
     }
 
     const handlers = {
-        connect: () => call("NavigationConnect", byId("player").value.trim()),
+        connect: () => call("NavigationConnect"),
         disconnect: () => call("NavigationDisconnect"),
         record: () => call("NavigationRecord"),
         cancel: () => call("NavigationCancel"),
@@ -456,6 +466,16 @@ function initNavigation() {
             }
         });
     }
+
+    byId("player").addEventListener("change", async (event) => {
+        try {
+            const result = await call("NavigationSelectPlayer", event.target.value);
+            if (result) setStatus(result);
+            await refresh();
+        } catch {
+            setStatus("Could not change the map location.", "err");
+        }
+    });
 
     if (isHost) setInterval(() => {
         if (document.querySelector('[data-page="navigation"].is-active')) refresh().catch(() => {});

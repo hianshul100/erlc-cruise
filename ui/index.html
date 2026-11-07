@@ -135,11 +135,12 @@
 
             <section class="page" data-page="navigation">
                 <div class="card">
-                    <label class="card-title" for="navigation-player">Private-server API</label>
-                    <p class="hint">Use your numeric Roblox user ID and your ER:LC server key. The key is entered in a separate prompt and kept for this session.</p>
-                    <input class="field" id="navigation-player" inputmode="numeric" maxlength="20" placeholder="Roblox user ID">
+                    <label class="card-title" >Private-server API</label>
+                    <p class="hint">Connect with your ER:LC server key. The key is entered in a separate prompt and kept for this session.</p>
                     <button class="btn" id="navigation-connect">Connect API</button>
                     <button class="btn btn-ghost" id="navigation-disconnect">Disconnect</button>
+                    <label for="navigation-player">Map location</label>
+                    <select class="field" id="navigation-player" disabled><option value="">Choose a location</option></select>
                     <p class="hint" id="navigation-status">Disconnected</p>
                 </div>
                 <div class="card">

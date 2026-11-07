@@ -50,8 +50,9 @@ Take over when markings leave the selected view or at abrupt turns.
 
 ## API navigation
 
-Open **Settings → Navigation**, enter your numeric Roblox user ID, and click
-**Connect API**. Enter your ER:LC private-server key in the masked prompt.
+Open **Settings → Navigation** and click **Connect API**. Enter your ER:LC
+private-server key in the masked prompt. If several players have location
+data, choose a map location from the list.
 The key stays in memory for this session and goes only to the official API.
 The API pack and a server key are required. No account or Discord login is used.
 

@@ -15,6 +15,7 @@ class Navigation {
 
     __New() {
         this.Routes := []
+        this.Players := []
         this.RouteFile := Paths.AppDataDir "\routes.json"
         try {
             saved := JSON.parse(FileRead(this.RouteFile, "UTF-8"), false, false)
@@ -24,18 +25,15 @@ class Navigation {
         this.PollFn := this.Poll.Bind(this)
     }
 
-    Connect(playerId) {
+    Connect() {
         if this.Recording
             return "Save or cancel the current recording before reconnecting."
-        if !RegExMatch(playerId, "^\d{1,20}$")
-            return "Enter your numeric Roblox user ID."
         prompt := InputBox("Enter the ER:LC private-server key. It stays in memory for this session.",
             "ER:LC Navigation", "Password w440")
         if prompt.Result != "OK" || Trim(prompt.Value) = ""
             return "Connection cancelled."
         this.Disconnect()
         this.Key := Trim(prompt.Value)
-        this.PlayerId := playerId
         this.Status := "Connecting"
         this.NextRead := 0
         SetTimer(this.PollFn, 250)
@@ -48,6 +46,8 @@ class Navigation {
             try this.Request.Abort()
         this.Request := ""
         this.Key := ""
+        this.Players := []
+        this.PlayerId := ""
         this.Position := false
         this.LastRead := 0
         this.Following := 0
@@ -108,11 +108,15 @@ class Navigation {
             }
             return
         }
-        point := Navigation.ReadPlayer(request.ResponseText, this.PlayerId)
+        this.Players := Navigation.ReadPlayers(request.ResponseText)
+        if this.PlayerId = "" && this.Players.Length = 1
+            this.PlayerId := this.Players[1].Id
+        point := this.GetSelectedPoint()
         previous := this.LivePosition()
         this.Position := point
         if !point {
-            this.Status := "Player location unavailable on this server."
+            this.Status := this.PlayerId = "" && this.Players.Length
+                ? "Connected. Choose a player location." : "Connected. Player location unavailable."
             return
         }
         this.LastRead := A_TickCount
@@ -123,24 +127,47 @@ class Navigation {
             this.Advance(point, previous)
     }
 
-    static ReadPlayer(body, playerId) {
+    static ReadPlayers(body) {
         data := JSON.parse(body, false, false)
+        players := []
         if !IsObject(data) || !data.HasOwnProp("Players") || !(data.Players is Array)
-            return false
+            return players
         for player in data.Players {
-            if !IsObject(player) || !player.HasOwnProp("Player") || !RegExMatch(player.Player, ":" playerId "$")
+            if !IsObject(player) || !player.HasOwnProp("Player")
+                || !RegExMatch(player.Player, "^(.+):(\d+)$", &identity)
                 continue
             if !player.HasOwnProp("Location") || !IsObject(player.Location)
-                return false
+                continue
             loc := player.Location
             if !loc.HasOwnProp("LocationX") || !loc.HasOwnProp("LocationZ")
                 || !IsNumber(loc.LocationX) || !IsNumber(loc.LocationZ)
-                return false
-            return {X: Number(loc.LocationX), Z: Number(loc.LocationZ),
+                continue
+            players.Push({Id: identity[2], Name: identity[1], Point: {
+                X: Number(loc.LocationX), Z: Number(loc.LocationZ),
                 Street: loc.HasOwnProp("StreetName") ? loc.StreetName : "",
-                Postal: loc.HasOwnProp("PostalCode") ? loc.PostalCode : ""}
+                Postal: loc.HasOwnProp("PostalCode") ? loc.PostalCode : ""}})
         }
+        return players
+    }
+
+    GetSelectedPoint() {
+        for player in this.Players
+            if player.Id = this.PlayerId
+                return player.Point
         return false
+    }
+
+    SelectPlayer(id) {
+        if this.Recording
+            return "Save or cancel recording before switching locations."
+        if id = this.PlayerId
+            return ""
+        this.PlayerId := id
+        this.Position := false
+        this.LastRead := 0
+        this.StopRoute()
+        this.Status := id = "" ? "Connected. Choose a player location." : "Waiting for location."
+        return this.Status
     }
 
     LivePosition() {
@@ -278,11 +305,18 @@ class Navigation {
         return place
     }
 
+    PlayerOptions() {
+        options := []
+        for player in this.Players
+            options.Push({id: player.Id, name: player.Name})
+        return options
+    }
+
     State() {
         names := []
         for route in this.Routes
             names.Push(route.Name)
         return {status: this.Status, location: this.HudText(), connected: this.Key != "",
-            playerId: this.PlayerId, recording: !!this.Recording, following: !!this.Following, routes: names}
+            players: this.PlayerOptions(), playerId: this.PlayerId, recording: !!this.Recording, following: !!this.Following, routes: names}
     }
 }
