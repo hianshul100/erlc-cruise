@@ -40,6 +40,7 @@ class Ui {
         g.AddCallbackToScript("OpenDataFolder", (*) => (Run(Paths.AppDataDir), "Opened."))
         g.AddCallbackToScript("OpenLogs", (*) => (Run(Paths.LogsDir), "Opened."))
         g.AddCallbackToScript("SelectRegion", (*) => this.OnSelectRegion())
+        g.AddCallbackToScript("SelectLaneRegion", (*) => this.OnSelectLaneRegion())
         g.AddCallbackToScript("TestRead", (*) => this.OnTestRead())
         g.AddCallbackToScript("CloseWindow", (*) => (this.Hide(), ""))
 
@@ -123,6 +124,7 @@ class Ui {
                 Monochrome: Config.GetInt("Ocr", "Monochrome")
             },
             region: {x: r.X, y: r.Y, w: r.W, h: r.H, set: Config.HasRegion()},
+            laneRegionSet: !!LaneAssist.ReadRegion(),
             debug: this.BuildDebug()
         }
     }
@@ -249,6 +251,34 @@ class Ui {
         }
         this.Open()
         return "done"
+    }
+
+    static OnSelectLaneRegion() {
+        hwnd := WinExist(GameWindow.WinTitle())
+        if !hwnd
+            return "Open Roblox and position your car before selecting the lane region."
+
+        gHud.Stop("Selecting lane region")
+        this.Hide()
+        hudWasVisible := gHud.Visible
+        if hudWasVisible
+            gHud.Hide()
+        try {
+            WinActivate(hwnd)
+            if !WinWaitActive(hwnd, , 2)
+                return "Could not focus Roblox."
+            WinGetClientPos(&x, &y, &width, &height, hwnd)
+            r := RegionSelector.Select("Box the road ahead with both lane markings. Esc cancels.", false)
+            if !r
+                return "Lane region selection cancelled."
+            if !LaneAssist.SaveRegion(r, x, y, width, height)
+                return "Draw a larger box fully inside the Roblox window."
+            return "Lane region saved."
+        } finally {
+            if hudWasVisible
+                gHud.Show()
+            this.Open()
+        }
     }
 
     static OnTestRead() {

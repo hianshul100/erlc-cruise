@@ -13,7 +13,34 @@ class LaneAssist {
         OnExit((*) => this.Stop())
     }
 
+    ; Store normalized client coordinates, independent of the speedometer box.
+    static SaveRegion(selection, x, y, width, height) {
+        if selection.W < 100 || selection.H < 60 || selection.X < x || selection.Y < y
+            || selection.X + selection.W > x + width || selection.Y + selection.H > y + height
+            return false
+        Config.Set("Lane", "Region", Format("{},{},{},{}",
+            Round((selection.X - x) * 10000 / width), Round((selection.Y - y) * 10000 / height),
+            Round((selection.X + selection.W - x) * 10000 / width),
+            Round((selection.Y + selection.H - y) * 10000 / height)))
+        return true
+    }
+
+    static ReadRegion() {
+        value := Config.Get("Lane", "Region")
+        if !RegExMatch(value, "^\d{1,5},\d{1,5},\d{1,5},\d{1,5}$")
+            return false
+        parts := StrSplit(value, ",")
+        x1 := Integer(parts[1]), y1 := Integer(parts[2])
+        x2 := Integer(parts[3]), y2 := Integer(parts[4])
+        if x2 > 10000 || y2 > 10000 || x1 >= x2 || y1 >= y2
+            return false
+        return {X1: x1, Y1: y1, X2: x2, Y2: y2}
+    }
+
     Start(requiresSpeed) {
+        this.Region := LaneAssist.ReadRegion()
+        if !this.Region
+            return
         InstallKeybdHook()
         this.RequiresSpeed := requiresSpeed
         this.ResumeAt := A_TickCount + 400
@@ -67,7 +94,12 @@ class LaneAssist {
         catch
             return
         CoordMode("Pixel", "Client")
-        direction := this.FindDirection(width, height)
+        r := this.Region
+        left := Round(width * r.X1 / 10000)
+        right := Min(width - 1, Round(width * r.X2 / 10000))
+        top := Round(height * r.Y1 / 10000)
+        bottom := Min(height - 1, Round(height * r.Y2 / 10000))
+        direction := this.FindDirection(left, top, right, bottom)
         confirmed := direction != "" && direction = this.LastDirection
         this.LastDirection := direction
         this.ResumeAt := A_TickCount + 90
@@ -84,17 +116,21 @@ class LaneAssist {
         this.LastDirection := ""
     }
 
-    FindDirection(width, height) {
-        center := width // 2
-        far := this.LaneEdges(width, Round(height * 0.64))
-        near := this.LaneEdges(width, Round(height * 0.72))
+    FindDirection(left, top, right, bottom) {
+        width := right - left
+        height := bottom - top
+        if width < 40 || height < 25
+            return ""
+        center := left + width // 2
+        far := this.LaneEdges(left, center, right, top + Round(height * 0.30))
+        near := this.LaneEdges(left, center, right, top + Round(height * 0.78))
         if !far || !near
             return ""
         if near.Left >= far.Left || near.Right <= far.Right
             return ""
 
         laneWidth := near.Right - near.Left
-        if laneWidth < width * 0.12 || laneWidth > width * 0.65
+        if laneWidth < width * 0.12 || laneWidth > width * 0.98
             return ""
         if center - near.Left < laneWidth * 0.27 && center - far.Left < (far.Right - far.Left) * 0.38
             return "d"
@@ -103,11 +139,10 @@ class LaneAssist {
         return ""
     }
 
-    LaneEdges(width, y) {
-        center := width // 2
+    LaneEdges(leftBound, center, rightBound, y) {
         try {
-            if PixelSearch(&left, &unused, center - 1, y, Round(width * 0.12), y, 0xEEEEEE, 26)
-                && PixelSearch(&right, &unused, center + 1, y, Round(width * 0.88), y, 0xEEEEEE, 26)
+            if PixelSearch(&left, &unused, center - 1, y, leftBound, y, 0xEEEEEE, 26)
+                && PixelSearch(&right, &unused, center + 1, y, rightBound, y, 0xEEEEEE, 26)
                 return { Left: left, Right: right }
         } catch {
             return false

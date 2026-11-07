@@ -39,6 +39,7 @@ class Config {
             "ShowAccel", 0,
             "ShowAction", 0
         ),
+        "Lane", Map("Region", ""),
         "Region", Map(
             "X", 0,
             "Y", 0,

@@ -121,6 +121,8 @@ class Hud {
             this.Stop("Stopped from HUD")
         } else if !GameWindow.IsActive() {
             App.Notify("ERLC Cruise Control", "Focus Roblox before clicking Start.")
+        } else if this.Mode != 1 && !LaneAssist.ReadRegion() {
+            App.Notify("ERLC Cruise Control", "Open Settings and choose Select Lane Region first.")
         } else {
             if this.Mode != 2
                 this.Engine.Toggle()

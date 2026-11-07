@@ -9,7 +9,7 @@
 
 class RegionSelector {
     ; Runs the interactive selection. Returns {X, Y, W, H} or "" if cancelled.
-    static Select() {
+    static Select(prompt := "Drag over the speedometer. Esc cancels.", previewOcr := true) {
         CoordMode "Mouse", "Screen"
         vx := SysGet(76), vy := SysGet(77), vw := SysGet(78), vh := SysGet(79)
 
@@ -28,7 +28,7 @@ class RegionSelector {
         tip.MarginX := 8
         tip.MarginY := 4
         tip.SetFont("s10 cWhite", "Segoe UI")
-        tipTxt := tip.Add("Text", "w320", "Drag over the speedometer. Esc cancels.")
+        tipTxt := tip.Add("Text", "w420", prompt)
         tip.Show("Hide")
 
         ; --- wait for the initial press -------------------------------------
@@ -72,11 +72,11 @@ class RegionSelector {
             tip.Move(tx, ty)
 
             now := A_TickCount
-            if (r.W >= 5 && r.H >= 5 && now - lastPreview >= 200) {
+            if (previewOcr && r.W >= 5 && r.H >= 5 && now - lastPreview >= 200) {
                 lastPreview := now
                 preview := this.PreviewText(r.X, r.Y, r.W, r.H)
             }
-            tipTxt.Value := Format("{} x {}   {}", r.W, r.H, preview)
+            tipTxt.Value := Format("{}   {} x {}   {}", prompt, r.W, r.H, preview)
             tip.Show("NoActivate")
 
             Sleep 15

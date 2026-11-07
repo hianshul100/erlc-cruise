@@ -58,6 +58,9 @@ const Bridge = {
         if (isHost) { await call("SelectRegion"); return JSON.parse(await call("GetState")); }
         return mockState;
     },
+    async selectLaneRegion() {
+        return isHost ? await call("SelectLaneRegion") : "Preview mode.";
+    },
     async testRead() {
         if (isHost) return await call("TestRead");
         return "Preview mode.";
@@ -285,6 +288,10 @@ function render(state) {
 
     // Tuning
 
+    document.getElementById("lane-region-summary").textContent = state.laneRegionSet
+        ? "Lane region saved. Re-select if you change camera angle."
+        : "Center the camera and draw a box around the road ahead, including both lane markings.";
+
     // HUD
     document.getElementById("hudVisible").checked = !!state.hud.Visible;
     renderHudToggles(state.hud);
@@ -428,6 +435,16 @@ function initActions() {
             setStatus("Region saved.", "ok");
         } catch (e) {
             setStatus("Region selection failed: " + e, "err");
+        }
+    });
+
+    document.getElementById("select-lane-region").addEventListener("click", async () => {
+        try {
+            const result = await Bridge.selectLaneRegion();
+            render(await Bridge.getState());
+            setStatus(result, result === "Lane region saved." ? "ok" : "");
+        } catch (e) {
+            setStatus("Lane region selection failed: " + e, "err");
         }
     });
 

@@ -21,13 +21,15 @@ Click the mode label on the HUD to cycle through the three modes, then click
 | Lane Assist Only | Nudges the steering near visible white lane markings. |
 | Both | Runs speed maintenance and lane assistance together. |
 
-For either speed mode, use **Settings → OCR & Region → Select Speedometer
+For either speed mode, use **Settings → Regions & OCR → Select Speedometer
 Region**, or press **F5** in Roblox, and draw a box around the speed digits.
 Set the target in **General**. Enable **Lock to current speed when enabling
 cruise** to capture the speed at Start instead.
 
-Lane assist uses a separate screen scan. Use a centered driving camera and a
-road with visible white markings on both sides. It pauses while you steer
+For either lane mode, open **Settings → Regions & OCR → Select Lane Region**.
+Use a centered driving camera and box the road ahead so both white lane
+markings are visible inside the box. The box is saved separately from the
+speedometer and follows the Roblox window. It pauses while you steer
 manually and waits briefly after you release the steering key. It can miss
 markings or mistake bright objects for them.
 
