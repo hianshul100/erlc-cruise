@@ -1,4 +1,4 @@
-# ERLC Cruise Control
+# ERLC Cruise Control by Wayne_Osborn
 
 A portable Windows app for Emergency Response: Liberty County with speed
 maintenance and experimental lane assistance.
