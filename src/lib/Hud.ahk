@@ -243,6 +243,9 @@ class Hud {
             mode: this.ModeNames[this.Mode],
             laneNeedsRegion: this.Mode != 1 && !this.Lane.Active && !LaneAssist.ReadRegion(),
             laneStatus: this.Lane.Status,
+            laneName: this.Lane.LaneName,
+            laneBoundaries: this.Lane.Acquired && this.Lane.LastLane
+                ? "Left: " this.Lane.LastLane.LeftStyle " · Right: " this.Lane.LastLane.RightStyle : "",
             navigation: gNavigation.HudText(),
             debug: st.debug,
             target: st.target,

@@ -85,6 +85,7 @@ function render(state) {
     toggle.setAttribute("aria-pressed", state.active ? "true" : "false");
 
     const status = el("status");
+    status.title = state.laneBoundaries || "";
     const dot = el("dot");
 
     if (state.debug && !state.laneActive) {
@@ -92,7 +93,7 @@ function render(state) {
         status.style.color = COLORS.debug;
         dot.classList.remove("on");
     } else if (state.active) {
-        status.textContent = state.laneActive ? state.laneStatus : "ACTIVE";
+        status.textContent = state.laneActive ? (state.laneStatus === "Lane detected" ? state.laneName || state.laneStatus : state.laneStatus) : "ACTIVE";
         status.style.color = COLORS.on;
         dot.classList.add("on");
     } else {

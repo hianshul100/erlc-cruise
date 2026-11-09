@@ -171,6 +171,11 @@ class CruiseEngine {
         this.LaneReadAt := 0
     }
 
+    ResetLaneReading() {
+        this.LaneLimit := -1
+        this.LaneReadAt := 0
+    }
+
     UpdateLaneGuidance(curvature) {
         now := A_TickCount
         desired := CruiseEngine.BendLimit(this.Target, curvature)
@@ -201,7 +206,8 @@ class CruiseEngine {
             return
         }
 
-        if this.Debug || this.RawSpeed < 0 || this.Reader.SecondsSinceRead() > 0.5 {
+        if this.Debug || this.RawSpeed < 0 || this.Reader.SecondsSinceRead() > 0.5
+            || (this.LaneGuidance && !this.HasFreshLane()) {
             this.Duty := 0
             this.BrakeUntil := 0
             this.Input.ReleaseAll()
@@ -229,13 +235,19 @@ class CruiseEngine {
         this.Input.ReleaseBrake()
         ; Ease off before reaching the target when speed is already rising.
         predictedSpeed := this.RawSpeed + Max(0, this.Reader.Accel) * 0.25
-        throttle := (!this.LaneGuidance || this.HasFreshLane()) && overshoot < 0
+        throttle := overshoot < 0
             && (overshoot <= -2 || predictedSpeed < target)
-        this.Duty := throttle ? 1 : 0
-        if throttle
+        this.Duty := throttle ? (this.LaneGuidance ? CruiseEngine.ThrottleDuty(-overshoot, curveLimited) : 1) : 0
+        if this.Duty >= 1 || (this.Duty > 0 && Mod(now, 160) < this.Duty * 160)
             this.Input.HoldThrottle()
         else
             this.Input.ReleaseThrottle()
+    }
+
+    static ThrottleDuty(headroom, curveLimited) {
+        if curveLimited
+            return Min(0.60, Max(0.25, headroom / 11))
+        return headroom >= 5 ? 1 : Max(0.25, headroom / 5)
     }
 
     ; --- status -------------------------------------------------------------

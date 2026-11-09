@@ -90,3 +90,8 @@ accounts for the perspective narrowing on straight roads. In **Regions &
 OCR**, set **Car center in lane box (%)** to where the rear center of the
 car appears horizontally within the selected road box. Use 50 for a
 centered box. Clear **Tilted camera** to use the original scan profile.
+
+Lane assist waits for a consistent lane before sending inputs. The tilted
+profile can pair the solid yellow median edge with white lane dividers.
+In Both mode, throttle waits for lane acquisition and is pulsed near the
+target or through a bend.

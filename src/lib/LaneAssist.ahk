@@ -5,6 +5,12 @@ class LaneAssist {
     RequiresSpeed := false
     ResumeAt := 0
     LastDirection := ""
+    Acquired := false
+    AcquireSince := 0
+    AcquireFrames := 0
+    LastLaneAt := 0
+    LastLane := false
+    LaneName := ""
     SmoothedDemand := 0
     NextPulseAt := 0
     TrustedAt := 0
@@ -58,7 +64,7 @@ class LaneAssist {
             this.Engine.SetLaneGuidance(true)
         this.ResumeAt := A_TickCount + 400
         this.NextPulseAt := 0
-        this.Status := "Finding lanes"
+        this.ResetAcquisition()
         this.Active := true
         SetTimer(this.UpdateFn, 20)
     }
@@ -67,12 +73,48 @@ class LaneAssist {
         if this.RequiresSpeed
             this.Engine.SetLaneGuidance(false)
         this.Active := false
+        this.ResetAcquisition()
         this.Status := "Ready"
         SetTimer(this.UpdateFn, 0)
         this.ReleaseSteering()
+    }
+
+    ResetAcquisition() {
+        this.Acquired := false
+        this.AcquireSince := 0
+        this.AcquireFrames := 0
+        this.LastLaneAt := 0
+        this.LastLane := false
+        this.LaneName := ""
         this.LastDirection := ""
         this.SmoothedDemand := 0
         this.TrustedRows.Clear()
+        this.Status := "Finding lane"
+    }
+
+    AcceptLane(scan, now) {
+        if this.LastLaneAt && now - this.LastLaneAt > 360
+            this.ResetAcquisition()
+        if !scan || !scan.Trusted
+            return this.Acquired
+        if this.LastLane {
+            width := this.LastLane.Width
+            if Abs(scan.Center - this.LastLane.Center) > width * 0.38
+                || scan.Width < width * 0.58 || scan.Width > width * 1.65
+                this.ResetAcquisition()
+        }
+        this.LastLane := scan
+        this.LastLaneAt := now
+        if !this.AcquireFrames
+            this.AcquireSince := now
+        this.AcquireFrames++
+        if this.AcquireFrames >= 5 && now - this.AcquireSince >= 1250
+            this.Acquired := true
+        if this.Acquired
+            this.LaneName := scan.LaneName
+        else
+            this.Status := "Finding lane"
+        return this.Acquired
     }
 
     ReleaseSteering() {
@@ -98,12 +140,13 @@ class LaneAssist {
         now := A_TickCount
         if this.IsSteering() {
             this.Status := "Manual steering"
-            if this.RequiresSpeed
+            if this.RequiresSpeed && this.Acquired
                 this.Engine.SetLaneGuidance(false)
             this.ReleaseSteering()
             this.LastDirection := ""
             this.SmoothedDemand := 0
-            this.TrustedRows.Clear()
+            this.ResetAcquisition()
+            this.Status := "Manual steering"
             this.ResumeAt := now + 400
             return
         }
@@ -132,6 +175,12 @@ class LaneAssist {
         if !this.Active || WinActive(GameWindow.WinTitle()) != hwnd
             || this.IsSteering() || (this.RequiresSpeed && !this.Engine.Active)
             return
+        if !this.AcceptLane(scan, A_TickCount) {
+            if this.RequiresSpeed
+                this.Engine.ResetLaneReading()
+            return
+        }
+
         highway := IsSet(gNavigation) ? gNavigation.LiveHighway() : false
         if this.RequiresSpeed && scan && scan.Trusted
             this.Engine.UpdateLaneGuidance(highway
@@ -156,16 +205,16 @@ class LaneAssist {
         direction := scan.Direction
         duration := LaneAssist.PulseDuration(this.SmoothedDemand)
         if scan.Estimated
-            duration := Min(duration, 65)
+            duration := Min(duration, 48)
         this.HeldKey := direction
         Send("{" direction " down}")
         this.ReleaseAt := A_TickCount + duration
-        this.NextPulseAt := this.ReleaseAt + (scan.Estimated ? 85 : 45)
+        this.NextPulseAt := this.ReleaseAt + (scan.Estimated ? 120 : 75)
         this.Status := "Steer " StrUpper(direction)
         Logger.Action(Format("Lane assist steered {} for {} ms.", StrUpper(direction), duration))
     }
 
-    static PulseDuration(demand) => Round(Min(115, Max(32, 20 + Abs(demand) * 230)))
+    static PulseDuration(demand) => Round(Min(90, Max(24, 15 + Abs(demand) * 175)))
 
     FindDirection(x, y, width, height) {
         if width < 40 || height < 40 {
@@ -204,6 +253,7 @@ class LaneAssist {
         anchor := w * (this.TiltedCamera ? this.CameraCenter : 0.5)
         points := []
         measured := Map()
+        leftYellow := 0, rightYellow := 0, leftVisible := 0, rightVisible := 0
         searchCenter := anchor
         useHistory := A_TickCount - this.TrustedAt <= 240
         rows := this.TiltedCamera
@@ -215,6 +265,8 @@ class LaneAssist {
             split := Min(w - 14, Max(13, Round(searchCenter)))
             left := this.FindMark(pixels, row, split - 1, 12, -1)
             right := this.FindMark(pixels, row, split + 1, w - 13, 1)
+            leftColor := left >= 0 ? this.MarkColor(pixels, row + left * 4) : ""
+            rightColor := right >= 0 ? this.MarkColor(pixels, row + right * 4) : ""
             estimated := left < 0 || right < 0
             if estimated {
                 if !prior || (left < 0 && right < 0)
@@ -228,10 +280,12 @@ class LaneAssist {
                     continue
             }
             laneWidth := right - left
-            if laneWidth < w * 0.13 || laneWidth > w * 0.96
+            if laneWidth < w * (points.Length ? 0.065 : 0.12) || laneWidth > w * 0.96
                 continue
 
             center := (left + right) / 2
+            if this.TiltedCamera && !points.Length && Abs(center - anchor) > laneWidth * 0.25
+                continue
             if points.Length {
                 previous := points[-1]
                 minRatio := this.TiltedCamera ? Max(0.32, 0.72 - (previous.Y - fraction)) : 0.55
@@ -241,6 +295,10 @@ class LaneAssist {
             }
             point := {Y: fraction, X: center, Width: laneWidth, Left: left, Right: right}
             points.Push(point)
+            leftVisible += leftColor != ""
+            rightVisible += rightColor != ""
+            leftYellow += leftColor = "yellow"
+            rightYellow += rightColor = "yellow"
             if !estimated
                 measured[index] := point
             searchCenter := center
@@ -279,12 +337,51 @@ class LaneAssist {
             ? ((nearX - anchor) * 0.95 + bend * 0.75) / near.Width
             : ((nearX - anchor) * 0.40 + (farX - anchor) * 0.85) / near.Width
         curvature := Abs(bend) / near.Width
+        name := leftYellow >= 2 && leftYellow * 2 >= leftVisible && rightYellow = 0
+            ? "Leftmost lane" : "Lane tracked"
+        if rightYellow >= 2
+            return {Status: "Finding lane", Direction: "", Demand: 0, Estimated: false, Trusted: false}
+        leftStyle := this.BoundaryStyle(pixels, w, h, points, "Left")
+        rightStyle := this.BoundaryStyle(pixels, w, h, points, "Right")
         status := trusted ? "Lane detected" : "Tracking dashed line"
-        if Abs(demand) < 0.075
-            return {Status: status, Direction: "", Demand: 0, Estimated: !trusted, Trusted: trusted, Curvature: curvature}
-        direction := demand > 0 ? "d" : "a"
-        return {Status: trusted ? (demand > 0 ? "Lane leads right" : "Lane leads left") : status,
-            Direction: direction, Demand: demand, Estimated: !trusted, Trusted: trusted, Curvature: curvature}
+        threshold := curvature >= 0.13 ? 0.065 : 0.105
+        direction := Abs(demand) < threshold ? "" : demand > 0 ? "d" : "a"
+        return {Status: status, Direction: direction, Demand: demand, Estimated: !trusted,
+            Trusted: trusted, Curvature: curvature, LaneName: name, Center: nearX, Width: near.Width,
+            LeftStyle: leftStyle, RightStyle: rightStyle}
+    }
+
+    BoundaryStyle(pixels, w, h, points, side) {
+        hits := 0, samples := 0, interval := 1
+        Loop 24 {
+            fraction := points[1].Y - (points[1].Y - points[-1].Y) * (A_Index - 1) / 23
+            while interval < points.Length - 1 && fraction < points[interval + 1].Y
+                interval++
+            a := points[interval], b := points[interval + 1]
+            blend := (a.Y - fraction) / (a.Y - b.Y)
+            x := Round(a.%side% + (b.%side% - a.%side%) * blend)
+            margin := Max(3, Min(8, Round(a.Width * 0.09)))
+            left := Max(12, x - margin), right := Min(w - 13, x + margin)
+            if left > right
+                continue
+            row := Round((h - 1) * fraction) * w * 4
+            hits += this.FindMark(pixels, row, left, right, 1) >= 0
+            samples++
+        }
+        if hits < 3
+            return "unknown"
+        if hits >= samples * 0.82
+            return "solid"
+        return "dashed"
+    }
+
+    MarkColor(pixels, offset) {
+        b := NumGet(pixels, offset, "UChar")
+        g := NumGet(pixels, offset + 1, "UChar")
+        r := NumGet(pixels, offset + 2, "UChar")
+        if r >= 80 && g >= 45 && r >= g && g - b >= 23 && r - b >= 42
+            return "yellow"
+        return Max(r, g, b) - Min(r, g, b) <= 62 ? "white" : ""
     }
 
     ; A marking is a narrow bright stripe relative to the road around it.
@@ -293,14 +390,9 @@ class LaneAssist {
         while (step > 0 ? x <= limit : x >= limit) {
             offset := row + x * 4
             mark := this.Luma(pixels, offset)
-            if this.TiltedCamera {
-                b := NumGet(pixels, offset, "UChar")
-                g := NumGet(pixels, offset + 1, "UChar")
-                r := NumGet(pixels, offset + 2, "UChar")
-                if mark < 55 || Max(r, g, b) - Min(r, g, b) > 62 {
-                    x += step
-                    continue
-                }
+            if this.TiltedCamera && (mark < 55 || this.MarkColor(pixels, offset) = "") {
+                x += step
+                continue
             }
             for radius in [4, 8, 12] {
                 left := this.Luma(pixels, offset - radius * 4)
